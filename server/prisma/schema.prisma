@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  isVendor  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  wallets     Wallet[]
+  transactions Transaction[]
+  vendorProfile VendorProfile?
+
+  @@map("users")
+}
+
+model VendorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  businessName String
+  description String?
+  website     String?
+  logo        String?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("vendor_profiles")
+}
+
+model Wallet {
+  id       String @id @default(cuid())
+  userId   String
+  address  String @unique
+  network  String // 'ethereum', 'bitcoin', 'polygon', etc.
+  currency String // 'ETH', 'BTC', 'MATIC', etc.
+  balance  Decimal @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  walletId    String
+  amount      Decimal
+  currency    String
+  fiatAmount  Decimal?
+  fiatCurrency String? @default("USD")
+  status      TransactionStatus @default(PENDING)
+  txHash      String?
+  network     String
+  description String?
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  fromUser User   @relation("TransactionFrom", fields: [fromUserId], references: [id])
+  toUser   User   @relation("TransactionTo", fields: [toUserId], references: [id])
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  @@map("transactions")
+}
+
+model PriceData {
+  id         String   @id @default(cuid())
+  currency   String   @unique
+  priceUSD   Decimal
+  priceBTC   Decimal?
+  priceETH   Decimal?
+  marketCap  Decimal?
+  volume24h  Decimal?
+  change24h  Decimal?
+  lastUpdated DateTime @default(now())
+
+  @@map("price_data")
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
