@@ -7,6 +7,9 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 
+// Import Supabase
+import { supabaseAdmin } from './lib/supabase';
+
 // Import routes
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -52,12 +55,33 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Test Supabase connection
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      throw error;
+    }
+    
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      database: 'Connected'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      database: 'Disconnected',
+      error: error.message
+    });
+  }
 });
 
 // API routes

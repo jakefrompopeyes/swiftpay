@@ -1,14 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { supabaseAdmin } from '../lib/supabase';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    username: string;
+    name: string;
     isVendor: boolean;
   };
 }
@@ -31,26 +29,34 @@ export const authenticateToken = async (
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        isVendor: true,
-        createdAt: true
-      }
-    });
+    // Get user from Supabase
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name')
+      .eq('id', decoded.userId)
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       return res.status(401).json({ 
         success: false, 
         error: 'User not found' 
       });
     }
 
-    req.user = user;
+    // Check if user is a vendor
+    const { data: vendor } = await supabaseAdmin
+      .from('vendors')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isVendor: !!vendor
+    };
+    
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

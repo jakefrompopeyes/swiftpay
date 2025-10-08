@@ -1,0 +1,12 @@
+{
+  "name": "swiftpay",
+  "version": "1.0.0",
+  "description": "SwiftPay crypto payment processor database",
+  "migrations": [
+    {
+      "version": "001",
+      "name": "initial_schema",
+      "up": "001_initial_schema.sql"
+    }
+  ]
+}
