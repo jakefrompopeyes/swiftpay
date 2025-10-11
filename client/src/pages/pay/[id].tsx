@@ -155,29 +155,6 @@ export default function PayRequest() {
       </Head>
       
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        {/* Header */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <Link href="/" className="text-2xl font-bold text-indigo-600">
-                  SwiftPay
-                </Link>
-                <span className="ml-4 px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">
-                  SECURE PAYMENT
-                </span>
-              </div>
-              <Link 
-                href="/" 
-                className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                Back to Home
-              </Link>
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {data ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -340,5 +317,9 @@ export default function PayRequest() {
     </>
   )
 }
+
+// Remove app-wide Layout wrapper on this page (no sidebar/navigation)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(PayRequest as any).getLayout = (page: React.ReactElement) => page
 
 

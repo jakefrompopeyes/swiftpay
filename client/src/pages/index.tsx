@@ -217,3 +217,7 @@ export default function Home() {
     </Layout>
   )
 }
+
+// Remove app-wide Layout wrapper to avoid duplicate sidebars on homepage
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(Home as any).getLayout = (page: React.ReactElement) => page

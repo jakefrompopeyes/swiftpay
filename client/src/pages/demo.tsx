@@ -615,3 +615,5 @@ export default function Demo() {
     </Layout>
   )
 }
+
+// This page uses the app-wide Layout; no change needed.
