@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import '../styles/globals.css'
+import Layout from '../components/Layout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -15,7 +16,7 @@ type AppPropsWithLayout = AppProps & {
 }
 
 export default function App({ Component, pageProps }: AppPropsWithLayout) {
-  const getLayout = Component.getLayout ?? ((page) => page)
+  const getLayout = Component.getLayout ?? ((page) => <Layout>{page}</Layout>)
 
   return (
     <div className={inter.className}>

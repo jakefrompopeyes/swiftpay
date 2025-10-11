@@ -1,7 +1,4 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 export interface PriceData {
   currency: string;
@@ -56,31 +53,6 @@ export class PriceService {
   async updatePriceData(): Promise<void> {
     try {
       const prices = await this.getCurrentPrices();
-      
-      for (const price of prices) {
-        await prisma.priceData.upsert({
-          where: { currency: price.currency },
-          update: {
-            priceUSD: price.priceUSD,
-            priceBTC: price.priceBTC,
-            priceETH: price.priceETH,
-            marketCap: price.marketCap,
-            volume24h: price.volume24h,
-            change24h: price.change24h,
-            lastUpdated: new Date()
-          },
-          create: {
-            currency: price.currency,
-            priceUSD: price.priceUSD,
-            priceBTC: price.priceBTC,
-            priceETH: price.priceETH,
-            marketCap: price.marketCap,
-            volume24h: price.volume24h,
-            change24h: price.change24h
-          }
-        });
-      }
-
       console.log(`✅ Updated prices for ${prices.length} currencies`);
     } catch (error) {
       console.error('Error updating price data:', error);
@@ -89,13 +61,36 @@ export class PriceService {
 
   async getPrice(currency: string): Promise<number> {
     try {
-      const priceData = await prisma.priceData.findUnique({
-        where: { currency: currency.toUpperCase() }
-      });
+      // Map currency symbols to CoinGecko IDs
+      const currencyMap: Record<string, string> = {
+        'BTC': 'bitcoin',
+        'ETH': 'ethereum',
+        'USDC': 'usd-coin',
+        'USDT': 'tether',
+        'BNB': 'binancecoin',
+        'ADA': 'cardano',
+        'SOL': 'solana',
+        'DOT': 'polkadot',
+        'LINK': 'chainlink'
+      };
 
-      return priceData?.priceUSD || 0;
+      const coinGeckoId = currencyMap[currency.toUpperCase()];
+      if (!coinGeckoId) {
+        throw new Error(`Unsupported currency: ${currency}`);
+      }
+
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usd`,
+        {
+          headers: {
+            'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || ''
+          }
+        }
+      );
+
+      return response.data[coinGeckoId].usd;
     } catch (error) {
-      console.error('Error getting price:', error);
+      console.error(`Error getting price for ${currency}:`, error);
       return 0;
     }
   }

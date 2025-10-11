@@ -7,15 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { backendAPI } from '../services/backendAPI'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
-  username: z.string().min(3, 'Username must be at least 3 characters'),
+  name: z.string().min(3, 'Name must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  isVendor: z.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -42,26 +40,19 @@ export default function Register() {
     try {
       const { confirmPassword, ...submitData } = data
       
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      })
-
-      const result = await response.json()
+      const result = await backendAPI.auth.register(submitData.email, submitData.name, submitData.password)
 
       if (result.success) {
-        localStorage.setItem('token', result.data.token)
-        localStorage.setItem('user', JSON.stringify(result.data.user))
+        localStorage.setItem('swiftpay_token', result.data.token)
+        localStorage.setItem('swiftpay_user', JSON.stringify(result.data.user))
         toast.success('Account created successfully!')
-        router.push('/dashboard')
+        router.push('/vendor-dashboard')
       } else {
-        toast.error(result.error || 'Registration failed')
+        toast.error('Registration failed')
       }
-    } catch (error) {
-      toast.error('An error occurred during registration')
+    } catch (error: any) {
+      console.error('Registration error:', error)
+      toast.error(error.message || 'Registration failed')
     } finally {
       setIsLoading(false)
     }
@@ -77,6 +68,9 @@ export default function Register() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
+            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
+              <span className="text-2xl">⚡</span>
+            </div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
               Create your account
             </h2>
@@ -89,35 +83,19 @@ export default function Register() {
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                    First Name
-                  </label>
-                  <input
-                    {...register('firstName')}
-                    type="text"
-                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="John"
-                  />
-                  {errors.firstName && (
-                    <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                    Last Name
-                  </label>
-                  <input
-                    {...register('lastName')}
-                    type="text"
-                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Doe"
-                  />
-                  {errors.lastName && (
-                    <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
-                  )}
-                </div>
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <input
+                  {...register('name')}
+                  type="text"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="John Doe"
+                />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                )}
               </div>
 
               <div>
@@ -132,21 +110,6 @@ export default function Register() {
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                  Username
-                </label>
-                <input
-                  {...register('username')}
-                  type="text"
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="johndoe"
-                />
-                {errors.username && (
-                  <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
                 )}
               </div>
 
@@ -201,17 +164,6 @@ export default function Register() {
                   <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
                 )}
               </div>
-
-              <div className="flex items-center">
-                <input
-                  {...register('isVendor')}
-                  type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isVendor" className="ml-2 block text-sm text-gray-900">
-                  I want to accept payments as a vendor
-                </label>
-              </div>
             </div>
 
             <div>
@@ -229,4 +181,3 @@ export default function Register() {
     </>
   )
 }
-

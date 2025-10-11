@@ -1,143 +1,91 @@
-import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { asyncHandler } from '../middleware/errorHandler';
+import { Router, Request, Response } from 'express';
 import { PriceService } from '../services/price';
 
 const router = Router();
-const prisma = new PrismaClient();
 const priceService = new PriceService();
 
-// Get current crypto prices
-router.get('/prices', asyncHandler(async (req, res) => {
-  const prices = await prisma.priceData.findMany({
-    orderBy: { lastUpdated: 'desc' }
-  });
-
-  res.json({
-    success: true,
-    data: { prices }
-  });
-}));
-
-// Get price for specific currency
-router.get('/prices/:currency', asyncHandler(async (req, res) => {
-  const { currency } = req.params;
-  
-  const price = await prisma.priceData.findUnique({
-    where: { currency: currency.toUpperCase() }
-  });
-
-  if (!price) {
-    return res.status(404).json({
-      success: false,
-      error: 'Price data not found for this currency'
-    });
-  }
-
-  res.json({
-    success: true,
-    data: { price }
-  });
-}));
-
-// Convert crypto to fiat
-router.get('/convert/:amount/:fromCurrency/:toCurrency', asyncHandler(async (req, res) => {
-  const { amount, fromCurrency, toCurrency } = req.params;
-  
-  const numericAmount = parseFloat(amount);
-  if (isNaN(numericAmount)) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid amount'
-    });
-  }
-
-  let convertedAmount: number;
-  
-  if (toCurrency.toLowerCase() === 'usd') {
-    convertedAmount = await priceService.convertToFiat(numericAmount, fromCurrency);
-  } else {
-    // For now, only support USD conversion
-    return res.status(400).json({
-      success: false,
-      error: 'Only USD conversion is currently supported'
-    });
-  }
-
-  res.json({
-    success: true,
-    data: {
-      fromAmount: numericAmount,
-      fromCurrency: fromCurrency.toUpperCase(),
-      toAmount: convertedAmount,
-      toCurrency: toCurrency.toUpperCase(),
-      rate: convertedAmount / numericAmount
+// Get crypto prices
+router.get('/prices', async (req: Request, res: Response) => {
+  try {
+    const cryptocurrencies = ['BTC', 'ETH', 'USDC', 'USDT', 'BNB', 'ADA', 'SOL', 'DOT', 'LINK'];
+    const prices: Record<string, number> = {};
+    
+    for (const crypto of cryptocurrencies) {
+      try {
+        prices[crypto] = await priceService.getPrice(crypto);
+      } catch (error) {
+        console.error(`Failed to get price for ${crypto}:`, error);
+        prices[crypto] = 0;
+      }
     }
-  });
-}));
+    
+    res.json({
+      success: true,
+      data: prices
+    });
+  } catch (error: any) {
+    console.error('Get prices error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get prices'
+    });
+  }
+});
 
-// Get supported currencies
-router.get('/currencies', asyncHandler(async (req, res) => {
-  const currencies = [
-    { symbol: 'BTC', name: 'Bitcoin', network: 'bitcoin' },
-    { symbol: 'ETH', name: 'Ethereum', network: 'ethereum' },
-    { symbol: 'MATIC', name: 'Polygon', network: 'polygon' },
-    { symbol: 'USDC', name: 'USD Coin', network: 'ethereum' },
-    { symbol: 'USDT', name: 'Tether', network: 'ethereum' },
-    { symbol: 'BNB', name: 'Binance Coin', network: 'ethereum' },
-    { symbol: 'ADA', name: 'Cardano', network: 'cardano' },
-    { symbol: 'SOL', name: 'Solana', network: 'solana' },
-    { symbol: 'DOT', name: 'Polkadot', network: 'polkadot' },
-    { symbol: 'LINK', name: 'Chainlink', network: 'ethereum' }
+// Get specific crypto price
+router.get('/prices/:symbol', async (req: Request, res: Response) => {
+  const { symbol } = req.params;
+  
+  try {
+    const price = await priceService.getPrice(symbol.toUpperCase());
+    if (!price) {
+      res.status(404).json({
+        success: false,
+        error: 'Cryptocurrency not found'
+      });
+      return;
+    }
+    
+    res.json({
+      success: true,
+      data: price
+    });
+  } catch (error: any) {
+    console.error('Get price error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get price'
+    });
+  }
+});
+
+// Get supported cryptocurrencies
+router.get('/cryptocurrencies', async (req: Request, res: Response) => {
+  const cryptocurrencies = [
+    { symbol: 'BTC', name: 'Bitcoin', logo: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+    { symbol: 'ETH', name: 'Ethereum', logo: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+    { symbol: 'USDC', name: 'USD Coin', logo: 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png' },
+    { symbol: 'USDT', name: 'Tether', logo: 'https://assets.coingecko.com/coins/images/325/large/Tether.png' },
+    { symbol: 'BNB', name: 'BNB', logo: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png' },
+    { symbol: 'ADA', name: 'Cardano', logo: 'https://assets.coingecko.com/coins/images/975/large/cardano.png' },
+    { symbol: 'SOL', name: 'Solana', logo: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+    { symbol: 'DOT', name: 'Polkadot', logo: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png' },
+    { symbol: 'LINK', name: 'Chainlink', logo: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png' }
   ];
 
   res.json({
     success: true,
-    data: { currencies }
+    data: cryptocurrencies
   });
-}));
+});
 
-// Get vendor by username (for payment links)
-router.get('/vendor/:username', asyncHandler(async (req, res) => {
-  const { username } = req.params;
-
-  const user = await prisma.user.findUnique({
-    where: { username },
-    include: {
-      vendorProfile: true,
-      wallets: {
-        where: { isActive: true },
-        select: {
-          id: true,
-          address: true,
-          network: true,
-          currency: true
-        }
-      }
-    }
-  });
-
-  if (!user || !user.isVendor || !user.vendorProfile) {
-    return res.status(404).json({
-      success: false,
-      error: 'Vendor not found'
-    });
-  }
-
+// Health check
+router.get('/health', async (req: Request, res: Response) => {
   res.json({
     success: true,
-    data: {
-      vendor: {
-        id: user.id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        vendorProfile: user.vendorProfile,
-        wallets: user.wallets
-      }
-    }
+    message: 'SwiftPay API is running',
+    timestamp: new Date().toISOString()
   });
-}));
+});
 
 export default router;
-

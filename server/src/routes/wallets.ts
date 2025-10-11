@@ -1,228 +1,289 @@
-import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { body, validationResult } from 'express-validator';
+import { Router, Response } from 'express';
+import { supabaseAdmin } from '../lib/supabase';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
-import { BlockchainService } from '../services/blockchain';
+import { coinbaseCloudService } from '../services/coinbaseCloud';
 
 const router = Router();
-const prisma = new PrismaClient();
-const blockchainService = new BlockchainService();
 
 // Get user's wallets
-router.get('/', asyncHandler(async (req: AuthRequest, res) => {
-  const wallets = await prisma.wallet.findMany({
-    where: { userId: req.user!.id },
-    select: {
-      id: true,
-      address: true,
-      network: true,
-      currency: true,
-      balance: true,
-      isActive: true,
-      createdAt: true
+router.get('/', asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const { data: wallets, error } = await supabaseAdmin
+      .from('wallets')
+      .select('id, address, network, currency, created_at')
+      .eq('user_id', req.user!.id);
+
+    if (error) {
+      throw error;
     }
-  });
 
-  res.json({
-    success: true,
-    data: { wallets }
-  });
-}));
+    res.json({
+      success: true,
+      data: wallets || []
+    });
 
-// Create new wallet
-router.post('/', [
-  body('network').isIn(['ethereum', 'polygon', 'bitcoin']),
-  body('currency').isLength({ min: 2, max: 10 })
-], asyncHandler(async (req: AuthRequest, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
+  } catch (error: any) {
+    console.error('Get wallets error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Validation failed',
-      details: errors.array()
+      error: 'Failed to get wallets'
     });
   }
-
-  const { network, currency } = req.body;
-
-  // Check if user already has a wallet for this network
-  const existingWallet = await prisma.wallet.findFirst({
-    where: {
-      userId: req.user!.id,
-      network,
-      currency
-    }
-  });
-
-  if (existingWallet) {
-    return res.status(400).json({
-      success: false,
-      error: 'Wallet for this network and currency already exists'
-    });
-  }
-
-  // Generate new wallet address
-  const address = await blockchainService.generateWallet(network, req.user!.id);
-
-  const wallet = await prisma.wallet.findUnique({
-    where: { address },
-    select: {
-      id: true,
-      address: true,
-      network: true,
-      currency: true,
-      balance: true,
-      isActive: true,
-      createdAt: true
-    }
-  });
-
-  res.status(201).json({
-    success: true,
-    message: 'Wallet created successfully',
-    data: { wallet }
-  });
 }));
 
-// Get wallet balance
-router.get('/:walletId/balance', asyncHandler(async (req: AuthRequest, res) => {
-  const { walletId } = req.params;
+// Create new wallet using Coinbase Cloud
+router.post('/', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { network = 'ethereum' } = req.body;
 
-  const wallet = await prisma.wallet.findFirst({
-    where: {
-      id: walletId,
-      userId: req.user!.id
+  try {
+    // Create wallet using Coinbase Cloud WaaS
+    const walletResult = await coinbaseCloudService.createWallet(req.user!.id, network);
+
+    // Save wallet reference to our database
+    const { data: savedWallet, error } = await supabaseAdmin
+      .from('wallets')
+      .insert({
+        user_id: req.user!.id,
+        address: walletResult.address,
+        private_key: `coinbase_cloud_${walletResult.walletId}`, // Store Coinbase Cloud wallet ID instead of private key
+        network: walletResult.network,
+        currency: walletResult.currency,
+        mnemonic: null // Coinbase Cloud handles key management
+      })
+      .select('id, address, network, currency, created_at')
+      .single();
+
+    if (error) {
+      throw error;
     }
-  });
 
-  if (!wallet) {
-    return res.status(404).json({
+    res.status(201).json({
+      success: true,
+      message: `${walletResult.currency} wallet created successfully via Coinbase Cloud`,
+      data: {
+        ...savedWallet,
+        coinbaseWalletId: walletResult.walletId
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Create wallet error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Wallet not found'
+      error: error.message || 'Failed to create wallet'
     });
   }
-
-  // Get real-time balance from blockchain
-  const balance = await blockchainService.getBalance(wallet.network, wallet.address);
-
-  // Update balance in database
-  await prisma.wallet.update({
-    where: { id: walletId },
-    data: { balance: parseFloat(balance) }
-  });
-
-  res.json({
-    success: true,
-    data: {
-      walletId: wallet.id,
-      address: wallet.address,
-      network: wallet.network,
-      currency: wallet.currency,
-      balance: balance,
-      fiatValue: 0 // Will be calculated with price service
-    }
-  });
 }));
 
-// Get wallet details
-router.get('/:walletId', asyncHandler(async (req: AuthRequest, res) => {
-  const { walletId } = req.params;
+// Get wallet balance using Coinbase Cloud
+router.get('/:id/balance', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
 
-  const wallet = await prisma.wallet.findFirst({
-    where: {
-      id: walletId,
-      userId: req.user!.id
-    },
-    include: {
-      transactions: {
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        select: {
-          id: true,
-          amount: true,
-          currency: true,
-          status: true,
-          createdAt: true,
-          description: true
+  try {
+    // Get wallet from database
+    const { data: wallet, error } = await supabaseAdmin
+      .from('wallets')
+      .select('address, network, currency, private_key')
+      .eq('id', id)
+      .eq('user_id', req.user!.id)
+      .single();
+
+    if (error || !wallet) {
+      res.status(404).json({
+        success: false,
+        error: 'Wallet not found'
+      });
+      return;
+    }
+
+    // Get balance using Coinbase Cloud service
+    const balance = await coinbaseCloudService.getWalletBalance(wallet.address, wallet.network);
+
+    res.json({
+      success: true,
+      data: {
+        address: wallet.address,
+        network: wallet.network,
+        currency: wallet.currency,
+        balance: balance,
+        provider: 'Coinbase Cloud'
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Get balance error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get wallet balance'
+    });
+  }
+}));
+
+// Request faucet funds for testing
+router.post('/:id/faucet', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { token = 'eth' } = req.body;
+
+  try {
+    // Get wallet from database
+    const { data: wallet, error } = await supabaseAdmin
+      .from('wallets')
+      .select('address, network, currency')
+      .eq('id', id)
+      .eq('user_id', req.user!.id)
+      .single();
+
+    if (error || !wallet) {
+      res.status(404).json({
+        success: false,
+        error: 'Wallet not found'
+      });
+      return;
+    }
+
+    // Request faucet funds
+    const faucetResult = await coinbaseCloudService.requestFaucet(wallet.address, wallet.network, token);
+
+    res.json({
+      success: true,
+      data: {
+        transactionHash: faucetResult.transactionHash,
+        explorerUrl: faucetResult.explorerUrl,
+        network: wallet.network,
+        currency: wallet.currency
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Faucet request error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to request faucet funds'
+    });
+  }
+}));
+
+// Delete wallet
+router.delete('/:id', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('wallets')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.user!.id);
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      message: 'Wallet deleted successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Delete wallet error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete wallet'
+    });
+  }
+}));
+
+// Get supported networks from Coinbase Cloud
+router.get('/networks', asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const networks = await coinbaseCloudService.getSupportedNetworks();
+    
+    res.json({
+      success: true,
+      data: networks.map(network => ({
+        network: network.network,
+        name: network.name,
+        currency: network.currency,
+        provider: 'Coinbase Cloud'
+      }))
+    });
+  } catch (error: any) {
+    console.error('Get networks error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get supported networks'
+    });
+  }
+}));
+
+// Create missing auto-wallets for existing users
+router.post('/create-missing', asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    
+    // Get existing wallets for this user
+    const { data: existingWallets, error: walletError } = await supabaseAdmin
+      .from('wallets')
+      .select('currency')
+      .eq('user_id', userId);
+
+    if (walletError) {
+      throw walletError;
+    }
+
+    const existingCurrencies = existingWallets.map(w => w.currency);
+    const autoCreateNetworks = ['ethereum', 'bitcoin', 'solana', 'tron', 'bsc'];
+    const autoCreateCurrencies = ['ETH', 'BTC', 'SOL', 'TRX', 'BNB'];
+    
+    const missingWallets = [];
+    
+    for (let i = 0; i < autoCreateNetworks.length; i++) {
+      const network = autoCreateNetworks[i];
+      const currency = autoCreateCurrencies[i];
+      
+      if (!existingCurrencies.includes(currency)) {
+        try {
+          const walletResult = await coinbaseCloudService.createWallet(userId, network);
+          
+          // Save wallet to database
+          const { data: savedWallet, error: saveError } = await supabaseAdmin
+            .from('wallets')
+            .insert({
+              user_id: userId,
+              address: walletResult.address,
+              private_key: `coinbase_cloud_${walletResult.walletId}`,
+              network: walletResult.network,
+              currency: walletResult.currency,
+              mnemonic: null
+            })
+            .select('id, address, network, currency, created_at')
+            .single();
+
+          if (saveError) {
+            throw saveError;
+          }
+
+          missingWallets.push(savedWallet);
+          console.log(`✅ Created missing ${currency} wallet for user ${userId}`);
+        } catch (error: any) {
+          console.error(`❌ Failed to create ${currency} wallet:`, error.message);
         }
       }
     }
-  });
 
-  if (!wallet) {
-    return res.status(404).json({
+    res.json({
+      success: true,
+      message: `Created ${missingWallets.length} missing wallets`,
+      data: missingWallets
+    });
+
+  } catch (error: any) {
+    console.error('Create missing wallets error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Wallet not found'
+      error: 'Failed to create missing wallets'
     });
   }
-
-  res.json({
-    success: true,
-    data: { wallet }
-  });
-}));
-
-// Update wallet (activate/deactivate)
-router.patch('/:walletId', [
-  body('isActive').isBoolean()
-], asyncHandler(async (req: AuthRequest, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: errors.array()
-    });
-  }
-
-  const { walletId } = req.params;
-  const { isActive } = req.body;
-
-  const wallet = await prisma.wallet.findFirst({
-    where: {
-      id: walletId,
-      userId: req.user!.id
-    }
-  });
-
-  if (!wallet) {
-    return res.status(404).json({
-      success: false,
-      error: 'Wallet not found'
-    });
-  }
-
-  const updatedWallet = await prisma.wallet.update({
-    where: { id: walletId },
-    data: { isActive },
-    select: {
-      id: true,
-      address: true,
-      network: true,
-      currency: true,
-      balance: true,
-      isActive: true,
-      createdAt: true
-    }
-  });
-
-  res.json({
-    success: true,
-    message: 'Wallet updated successfully',
-    data: { wallet: updatedWallet }
-  });
-}));
-
-// Get supported networks
-router.get('/networks/supported', asyncHandler(async (req, res) => {
-  const networks = await blockchainService.getSupportedNetworks();
-  
-  res.json({
-    success: true,
-    data: { networks }
-  });
 }));
 
 export default router;
-

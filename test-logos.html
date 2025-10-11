@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Crypto Logos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .wallet-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .logo-container {
+            width: 48px;
+            height: 48px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .logo-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+        .logo-emoji {
+            font-size: 24px;
+        }
+        .wallet-info {
+            flex: 1;
+        }
+        .wallet-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .wallet-address {
+            font-family: monospace;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cryptocurrency Logo Test</h1>
+    <p>Testing logo display for different cryptocurrencies:</p>
+    
+    <div class="wallet-card">
+        <div class="logo-container">
+            <img src="https://assets.coingecko.com/coins/images/279/small/ethereum.png?1696501628" 
+                 alt="ETH logo" class="logo-img" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="logo-emoji" style="display: none;">🔷</span>
+        </div>
+        <div class="wallet-info">
+            <div class="wallet-name">Ethereum Wallet</div>
+            <div class="wallet-address">0xbF0a1234567890abcdef1234567890abcdef1234</div>
+        </div>
+    </div>
+
+    <div class="wallet-card">
+        <div class="logo-container">
+            <img src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png?1696501400" 
+                 alt="BTC logo" class="logo-img" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="logo-emoji" style="display: none;">🟠</span>
+        </div>
+        <div class="wallet-info">
+            <div class="wallet-name">Bitcoin Wallet</div>
+            <div class="wallet-address">bc1qyn1234567890abcdef1234567890abcdef1234567890</div>
+        </div>
+    </div>
+
+    <div class="wallet-card">
+        <div class="logo-container">
+            <img src="https://assets.coingecko.com/coins/images/4128/small/solana.png?1696504756" 
+                 alt="SOL logo" class="logo-img" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="logo-emoji" style="display: none;">🟣</span>
+        </div>
+        <div class="wallet-info">
+            <div class="wallet-name">Solana Wallet</div>
+            <div class="wallet-address">GGQX9F1234567890abcdef1234567890abcdef1234567890FkjJ</div>
+        </div>
+    </div>
+
+    <div class="wallet-card">
+        <div class="logo-container">
+            <img src="https://assets.coingecko.com/coins/images/1094/small/tron-logo.png?1696502193" 
+                 alt="TRX logo" class="logo-img" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="logo-emoji" style="display: none;">🔴</span>
+        </div>
+        <div class="wallet-info">
+            <div class="wallet-name">TRON Wallet</div>
+            <div class="wallet-address">Tihy0o1234567890abcdef1234567890abcdef1234567890808e</div>
+        </div>
+    </div>
+
+    <div class="wallet-card">
+        <div class="logo-container">
+            <img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png?1696501970" 
+                 alt="BNB logo" class="logo-img" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="logo-emoji" style="display: none;">🟡</span>
+        </div>
+        <div class="wallet-info">
+            <div class="wallet-name">BNB Wallet</div>
+            <div class="wallet-address">0x54751234567890abcdef1234567890abcdef1234567890fA30</div>
+        </div>
+    </div>
+
+    <script>
+        console.log('Logo test page loaded');
+        
+        // Test if images are loading
+        document.querySelectorAll('.logo-img').forEach((img, index) => {
+            img.addEventListener('load', () => {
+                console.log(`Logo ${index + 1} loaded successfully`);
+            });
+            img.addEventListener('error', () => {
+                console.log(`Logo ${index + 1} failed to load, showing emoji fallback`);
+            });
+        });
+    </script>
+</body>
+</html>
+

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { 
@@ -11,29 +11,48 @@ import {
   ShareIcon,
   CogIcon
 } from '@heroicons/react/24/outline'
+import { backendAPI } from '../services/backendAPI'
 
 export default function MerchantTools() {
   const [selectedIntegration, setSelectedIntegration] = useState<'button' | 'link' | 'api' | 'embed'>('button')
   const [merchantName, setMerchantName] = useState('Your Business')
+  const [merchantId, setMerchantId] = useState('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [buttonStyle, setButtonStyle] = useState('primary')
   const [buttonSize, setButtonSize] = useState('medium')
   const [isCopied, setIsCopied] = useState(false)
+  const [currency, setCurrency] = useState('ETH')
+  const [createdLink, setCreatedLink] = useState<string>('')
+  const [creating, setCreating] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // Try to auto-load merchant id from auth
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
+      if (token) {
+        backendAPI.auth.verify().then((res) => {
+          if (res?.data?.user?.id) setMerchantId(res.data.user.id)
+        }).catch(() => {})
+      }
+    } catch {}
+  }, [])
 
   const generateCheckoutUrl = () => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.com'
+    const origin = mounted && typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'
+    const backendOrigin = origin.replace(/:\d+$/, ':3001')
     const params = new URLSearchParams()
-    
     if (amount) params.append('amount', amount)
     if (description) params.append('description', description)
-    if (merchantName) params.append('merchant', merchantName)
-    
-    return `${baseUrl}/checkout?${params.toString()}`
+    if (merchantId) params.append('mid', merchantId)
+    if (currency) params.append('currency', currency)
+    return `${backendOrigin}/r/pay?${params.toString()}`
   }
 
   const generateButtonCode = () => {
-    const checkoutUrl = generateCheckoutUrl()
+    const href = createdLink || generateCheckoutUrl()
     const buttonText = amount ? `Pay $${amount}` : 'Pay with Crypto'
     
     const styles = {
@@ -50,25 +69,36 @@ export default function MerchantTools() {
     }
 
     return `
-<!-- SwiftPay Payment Button -->
-<a href="${checkoutUrl}" 
+<!-- SwiftPay Payment Button (opens QR checkout) -->
+<a href="${href}" 
    style="${styles[buttonStyle as keyof typeof styles]} ${sizes[buttonSize as keyof typeof sizes]} text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; transition: all 0.2s;">
   ${buttonText}
 </a>
 <!-- End SwiftPay Button -->`
   }
 
+  const createPaymentRequest = async () => {
+    if (!amount || !currency) return
+    setCreating(true)
+    try {
+      const result = await backendAPI.paymentRequests.create(amount, currency, description)
+      if (result.success) {
+        setCreatedLink(result.data.checkoutUrl)
+        setIsCopied(false)
+      } else {
+        console.error(result)
+        alert(result.error || 'Failed to create payment request')
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const generateEmbedCode = () => {
-    const checkoutUrl = generateCheckoutUrl()
-    
+    const url = generateCheckoutUrl()
     return `
-<!-- SwiftPay Embedded Checkout -->
-<iframe src="${checkoutUrl}" 
-        width="100%" 
-        height="600" 
-        frameborder="0" 
-        style="border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-</iframe>
+<!-- SwiftPay Embedded QR Checkout -->
+<iframe src="${url}" width="100%" height="600" frameborder="0" style="border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
 <!-- End SwiftPay Embed -->`
   }
 
@@ -216,12 +246,25 @@ window.location.href = checkoutUrl;`
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Merchant Name
+                      Merchant Name (for display)
                     </label>
                     <input
                       type="text"
                       value={merchantName}
                       onChange={(e) => setMerchantName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Merchant ID (used in links)
+                    </label>
+                    <input
+                      type="text"
+                      value={merchantId}
+                      onChange={(e) => setMerchantId(e.target.value)}
+                      placeholder="Auto-filled when logged in"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
@@ -326,10 +369,13 @@ window.location.href = checkoutUrl;`
                 </div>
 
                 {/* Preview */}
-                {selectedIntegration === 'button' && (
+                {mounted && selectedIntegration === 'button' && (
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                     <div className="text-center">
-                      <div dangerouslySetInnerHTML={{ __html: generateButtonCode() }} />
+                      <div className="mb-3" dangerouslySetInnerHTML={{ __html: generateButtonCode() }} />
+                      <div className="text-xs text-gray-500">
+                        {createdLink ? 'This button will open a QR checkout page.' : 'Tip: Click "Generate Payment Request" below to create a QR link for this button.'}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -349,10 +395,10 @@ window.location.href = checkoutUrl;`
                 <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
                   <pre className="text-sm">
                     <code>
-                      {selectedIntegration === 'button' && generateButtonCode()}
-                      {selectedIntegration === 'link' && generateCheckoutUrl()}
+                      {mounted && selectedIntegration === 'button' && generateButtonCode()}
+                      {mounted && selectedIntegration === 'link' && generateCheckoutUrl()}
                       {selectedIntegration === 'api' && generateApiExample()}
-                      {selectedIntegration === 'embed' && generateEmbedCode()}
+                      {mounted && selectedIntegration === 'embed' && generateEmbedCode()}
                     </code>
                   </pre>
                 </div>
@@ -368,10 +414,10 @@ window.location.href = checkoutUrl;`
                   <div className="text-sm text-blue-700">
                     {selectedIntegration === 'button' && (
                       <ol className="list-decimal list-inside space-y-1">
+                        <li>{createdLink ? 'Payment request created. Button will open QR checkout.' : 'Optionally click "Generate Payment Request" below for a QR link.'}</li>
                         <li>Copy the generated HTML code</li>
                         <li>Paste it into your website's HTML</li>
                         <li>Customize the styling if needed</li>
-                        <li>Test the button on your site</li>
                       </ol>
                     )}
                     {selectedIntegration === 'link' && (

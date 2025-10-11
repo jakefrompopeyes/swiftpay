@@ -1,8 +1,5 @@
 import { ethers } from 'ethers';
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
-
-const prisma = new PrismaClient();
 
 export interface BlockchainConfig {
   name: string;
@@ -69,17 +66,6 @@ export class BlockchainService {
 
       const wallet = ethers.Wallet.createRandom();
       const address = wallet.address;
-
-      // Save wallet to database
-      await prisma.wallet.create({
-        data: {
-          userId,
-          address,
-          network,
-          currency: config.currency,
-          balance: 0
-        }
-      });
 
       return address;
     } catch (error) {

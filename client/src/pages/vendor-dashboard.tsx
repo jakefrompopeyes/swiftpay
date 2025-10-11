@@ -13,6 +13,8 @@ import {
 } from '@heroicons/react/24/outline'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import toast from 'react-hot-toast'
+import Layout from '../components/Layout'
+import { backendAPI } from '../services/backendAPI'
 
 interface VendorProfile {
   id: string
@@ -56,8 +58,8 @@ export default function VendorDashboard() {
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
+    const token = localStorage.getItem('swiftpay_token')
+    const userData = localStorage.getItem('swiftpay_user')
 
     if (!token || !userData) {
       router.push('/login')
@@ -65,39 +67,34 @@ export default function VendorDashboard() {
     }
 
     const user = JSON.parse(userData)
-    if (!user.isVendor) {
-      router.push('/dashboard')
-      return
-    }
-
-    fetchVendorData(token)
+    // For now, let's allow all users to access vendor dashboard
+    // Later we can check if user.isVendor is true
+    
+    fetchVendorData()
   }, [router, selectedPeriod])
 
-  const fetchVendorData = async (token: string) => {
+  const fetchVendorData = async () => {
     try {
-      const [profileResponse, analyticsResponse] = await Promise.all([
-        fetch('/api/vendors/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`/api/vendors/analytics?period=${selectedPeriod}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ])
-
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json()
-        if (profileData.success) {
-          setVendorProfile(profileData.data.vendorProfile)
-        }
+      setIsLoading(true)
+      
+      // Try to get vendor profile and analytics
+      try {
+        const [profileResponse, analyticsResponse] = await Promise.all([
+          backendAPI.vendors.getProfile(),
+          backendAPI.vendors.getAnalytics()
+        ])
+        
+        setVendorProfile(profileResponse.data)
+        setAnalytics(analyticsResponse.data)
+      } catch (error) {
+        // If vendor profile doesn't exist, show empty state
+        console.log('No vendor profile found, showing empty state')
+        setVendorProfile(null)
+        setAnalytics(null)
       }
-
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json()
-        if (analyticsData.success) {
-          setAnalytics(analyticsData.data.analytics)
-        }
-      }
+      
     } catch (error) {
+      console.error('Error fetching vendor data:', error)
       toast.error('Failed to load vendor data')
     } finally {
       setIsLoading(false)
@@ -105,8 +102,8 @@ export default function VendorDashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    localStorage.removeItem('swiftpay_token')
+    localStorage.removeItem('swiftpay_user')
     router.push('/')
   }
 
@@ -118,16 +115,43 @@ export default function VendorDashboard() {
     )
   }
 
-  if (!vendorProfile || !analytics) {
-    return null
+  if (!vendorProfile) {
+    return (
+      <>
+        <Head>
+          <title>Vendor Dashboard - SwiftPay</title>
+          <meta name="description" content="SwiftPay Vendor Dashboard" />
+        </Head>
+        
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="max-w-md w-full bg-white shadow rounded-lg p-6 text-center">
+            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100 mb-4">
+              <span className="text-2xl">🏪</span>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Welcome to SwiftPay!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              You need to create a vendor profile to start accepting crypto payments.
+            </p>
+            <Link
+              href="/merchant-tools"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Set Up Vendor Profile
+            </Link>
+          </div>
+        </div>
+      </>
+    )
   }
 
   // Prepare chart data
-  const chartData = analytics.transactionsByCurrency.map(item => ({
+  const chartData = analytics?.transactionsByCurrency?.map(item => ({
     currency: item.currency,
     volume: item._sum.fiatAmount || 0,
     count: item._count
-  }))
+  })) || []
 
   return (
     <>
@@ -193,7 +217,7 @@ export default function VendorDashboard() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Transactions</dt>
-                      <dd className="text-lg font-medium text-gray-900">{analytics.totalTransactions}</dd>
+                      <dd className="text-lg font-medium text-gray-900">{analytics?.totalTransactions || 0}</dd>
                     </dl>
                   </div>
                 </div>
@@ -209,7 +233,7 @@ export default function VendorDashboard() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Volume (USD)</dt>
-                      <dd className="text-lg font-medium text-gray-900">${analytics.totalVolumeUSD.toFixed(2)}</dd>
+                      <dd className="text-lg font-medium text-gray-900">${(analytics?.totalVolumeUSD || 0).toFixed(2)}</dd>
                     </dl>
                   </div>
                 </div>
@@ -225,7 +249,7 @@ export default function VendorDashboard() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Crypto Volume</dt>
-                      <dd className="text-lg font-medium text-gray-900">{analytics.totalVolumeCrypto.toFixed(4)}</dd>
+                      <dd className="text-lg font-medium text-gray-900">{(analytics?.totalVolumeCrypto || 0).toFixed(4)}</dd>
                     </dl>
                   </div>
                 </div>
@@ -242,7 +266,7 @@ export default function VendorDashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Avg Transaction</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        ${analytics.totalTransactions > 0 ? (analytics.totalVolumeUSD / analytics.totalTransactions).toFixed(2) : '0.00'}
+                        ${(analytics?.totalTransactions || 0) > 0 ? ((analytics?.totalVolumeUSD || 0) / (analytics?.totalTransactions || 1)).toFixed(2) : '0.00'}
                       </dd>
                     </dl>
                   </div>
@@ -320,7 +344,7 @@ export default function VendorDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {analytics.recentTransactions.map((transaction) => (
+                    {(analytics?.recentTransactions || []).map((transaction) => (
                       <tr key={transaction.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {transaction.fromUser.firstName} {transaction.fromUser.lastName}

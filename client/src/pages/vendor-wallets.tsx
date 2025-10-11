@@ -1,510 +1,730 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { 
+import { useRouter } from 'next/router'
+import {
   WalletIcon,
-  KeyIcon,
-  ShieldCheckIcon,
-  ArrowPathIcon,
   PlusIcon,
   EyeIcon,
   EyeSlashIcon,
+  ArrowPathIcon,
+  QrCodeIcon,
+  DocumentDuplicateIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   CurrencyDollarIcon,
   CogIcon,
   ChartBarIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  TrashIcon,
+  BeakerIcon,
+  GlobeAltIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  BanknotesIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  ClockIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline'
 import Layout from '../components/Layout'
+import { backendAPI } from '../services/backendAPI'
+import { cryptoLogoService } from '../services/cryptoLogos'
+import toast from 'react-hot-toast'
+
+interface Wallet {
+  id: string;
+  address: string;
+  network: string;
+  currency: string;
+  created_at: string;
+  balance?: string;
+}
+
+interface Network {
+  network: string;
+  name: string;
+  currency: string;
+  type: string;
+  icon: string;
+  description: string;
+  testnet: boolean;
+}
 
 export default function VendorWallets() {
   const [selectedTab, setSelectedTab] = useState('overview')
-  const [walletType, setWalletType] = useState<'individual' | 'centralized'>('centralized')
-  const [showPrivateKey, setShowPrivateKey] = useState(false)
+  const [wallets, setWallets] = useState<Wallet[]>([])
+  const [networks, setNetworks] = useState<Network[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isCreatingWallet, setIsCreatingWallet] = useState(false)
+  const [selectedNetwork, setSelectedNetwork] = useState('ethereum')
+  const [showTestnets, setShowTestnets] = useState(false)
+  const [expandedWallet, setExpandedWallet] = useState<string | null>(null)
+  const [balances, setBalances] = useState<Record<string, string>>({})
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState(false)
+  const [showQRCode, setShowQRCode] = useState<string | null>(null)
+  const [creatingLinkFor, setCreatingLinkFor] = useState<string | null>(null)
+  const [cryptoLogos, setCryptoLogos] = useState<Record<string, string>>({})
+  const router = useRouter()
 
-  const centralizedBalance = {
-    totalUSD: 2847.50,
-    holdings: [
-      { currency: 'USDC', balance: 1500.00, usdValue: 1500.00, icon: '🔵' },
-      { currency: 'ETH', balance: 0.75, usdValue: 1347.50, icon: '🔷' },
-      { currency: 'BTC', balance: 0.025, usdValue: 0.00, icon: '🟠' }
-    ]
-  }
+  useEffect(() => {
+    const token = localStorage.getItem('swiftpay_token')
+    const userData = localStorage.getItem('swiftpay_user')
 
-  const individualWallets = [
-    {
-      id: 'wallet-1',
-      address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-      network: 'Ethereum',
-      currency: 'ETH',
-      balance: 0.4567,
-      usdValue: 1023.45,
-      isActive: true,
-      createdAt: '2024-01-10T10:30:00Z',
-      privateKey: '0x1234567890abcdef...' // Never show in real app
-    },
-    {
-      id: 'wallet-2',
-      address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-      network: 'Bitcoin',
-      currency: 'BTC',
-      balance: 0.0123,
-      usdValue: 456.78,
-      isActive: true,
-      createdAt: '2024-01-12T14:20:00Z',
-      privateKey: '0xabcdef1234567890...'
+    if (!token || !userData) {
+      // For demo purposes, show mock wallets instead of redirecting
+      loadMockWallets()
+      return
     }
-  ]
 
-  const navigationItems = [
-    { id: 'overview', name: 'Wallet Overview', icon: WalletIcon, active: true },
-    { id: 'individual', name: 'Individual Wallets', icon: KeyIcon, active: false },
-    { id: 'centralized', name: 'Centralized Balance', icon: CurrencyDollarIcon, active: false },
-    { id: 'settings', name: 'Wallet Settings', icon: CogIcon, active: false },
-    { id: 'analytics', name: 'Wallet Analytics', icon: ChartBarIcon, active: false }
-  ]
+    fetchWallets()
+    fetchNetworks()
+  }, [router])
 
-  const handleCreateWallet = async () => {
-    setIsCreatingWallet(true)
-    // Simulate wallet creation
-    setTimeout(() => {
+  const loadMockWallets = () => {
+    console.log('Loading mock wallets...')
+    const mockWallets: Wallet[] = [
+      {
+        id: '1',
+        address: '0xbF0a1234567890abcdef1234567890abcdef1234',
+        network: 'ethereum',
+        currency: 'ETH',
+        created_at: '2025-10-09T00:00:00Z'
+      },
+      {
+        id: '2',
+        address: 'bc1qyn1234567890abcdef1234567890abcdef1234567890',
+        network: 'bitcoin',
+        currency: 'BTC',
+        created_at: '2025-10-09T00:00:00Z'
+      },
+      {
+        id: '3',
+        address: 'GGQX9F1234567890abcdef1234567890abcdef1234567890FkjJ',
+        network: 'solana',
+        currency: 'SOL',
+        created_at: '2025-10-09T00:00:00Z'
+      },
+      {
+        id: '4',
+        address: 'Tihy0o1234567890abcdef1234567890abcdef1234567890808e',
+        network: 'tron',
+        currency: 'TRX',
+        created_at: '2025-10-09T00:00:00Z'
+      },
+      {
+        id: '5',
+        address: '0x54751234567890abcdef1234567890abcdef1234567890fA30',
+        network: 'bsc',
+        currency: 'BNB',
+        created_at: '2025-10-09T00:00:00Z'
+      }
+    ]
+    
+    console.log('Mock wallets created:', mockWallets)
+    setWallets(mockWallets)
+    fetchCryptoLogos(mockWallets)
+    setIsLoading(false)
+    console.log('Mock wallets loaded, isLoading set to false')
+  }
+
+  const fetchWallets = async () => {
+    try {
+      setIsLoading(true)
+      const response = await backendAPI.wallets.getWallets()
+      if (response.success) {
+        setWallets(response.data)
+        // Fetch balances for each wallet
+        await fetchAllBalances(response.data)
+        // Fetch logos for each wallet
+        fetchCryptoLogos(response.data)
+      } else {
+        toast.error('Failed to fetch wallets')
+      }
+    } catch (error: any) {
+      console.error('Error fetching wallets:', error)
+      toast.error(error.message || 'Failed to fetch wallets')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchCryptoLogos = (walletList: Wallet[]) => {
+    try {
+      const currencies = Array.from(new Set(walletList.map(w => w.currency).filter(currency => currency && typeof currency === 'string')))
+      console.log('Currencies found:', currencies)
+      if (currencies.length > 0) {
+        const logos = cryptoLogoService.getMultipleLogos(currencies)
+        console.log('Logos fetched:', logos)
+        setCryptoLogos(logos)
+      }
+    } catch (error) {
+      console.error('Error fetching crypto logos:', error)
+      // Continue without logos - fallback icons will be used
+    }
+  }
+
+  const fetchNetworks = async () => {
+    try {
+      const response = await backendAPI.wallets.getSupportedNetworks()
+      if (response.success) {
+        setNetworks(response.data)
+      }
+    } catch (error: any) {
+      console.error('Error fetching networks:', error)
+    }
+  }
+
+  const fetchAllBalances = async (walletList: Wallet[]) => {
+    const balancePromises = walletList.map(async (wallet: Wallet) => {
+      try {
+        const balanceResponse = await backendAPI.wallets.getBalance(wallet.id)
+        return { walletId: wallet.id, balance: balanceResponse.data.balance }
+      } catch (error) {
+        return { walletId: wallet.id, balance: '0.0000' }
+      }
+    })
+    
+    const fetchedBalances = await Promise.all(balancePromises)
+    const balancesMap = fetchedBalances.reduce((acc, item) => {
+      acc[item.walletId] = item.balance
+      return acc
+    }, {} as Record<string, string>)
+    setBalances(balancesMap)
+  }
+
+  const createWallet = async () => {
+    try {
+      setIsCreatingWallet(true)
+      const response = await backendAPI.wallets.createWallet(selectedNetwork)
+      if (response.success) {
+        toast.success(`${selectedNetwork.toUpperCase()} wallet created successfully!`)
+        fetchWallets() // Refresh the wallet list
+      } else {
+        toast.error('Failed to create wallet')
+      }
+    } catch (error: any) {
+      console.error('Error creating wallet:', error)
+      toast.error(error.message || 'Failed to create wallet')
+    } finally {
       setIsCreatingWallet(false)
-      // Add new wallet to list
-    }, 2000)
+    }
   }
 
-  const handleMigrateToIndividual = () => {
-    // Show migration confirmation
-    console.log('Migrate to individual wallets')
+  const createMissingWallets = async () => {
+    try {
+      setIsCreatingWallet(true)
+      const response = await fetch('http://localhost:3001/api/wallets/create-missing', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('swiftpay_token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast.success(result.message)
+        fetchWallets() // Refresh the wallet list
+      } else {
+        toast.error(result.error || 'Failed to create missing wallets')
+      }
+    } catch (error: any) {
+      console.error('Error creating missing wallets:', error)
+      toast.error(error.message || 'Failed to create missing wallets')
+    } finally {
+      setIsCreatingWallet(false)
+    }
   }
 
-  const handleMigrateToCentralized = () => {
-    // Show migration confirmation
-    console.log('Migrate to centralized balance')
+  const deleteWallet = async (walletId: string) => {
+    if (!confirm('Are you sure you want to delete this wallet? This action cannot be undone.')) {
+      return
+    }
+    try {
+      await backendAPI.wallets.deleteWallet(walletId)
+      toast.success('Wallet deleted successfully!')
+      fetchWallets() // Refresh the wallet list
+    } catch (error: any) {
+      console.error('Error deleting wallet:', error)
+      toast.error(error.message || 'Failed to delete wallet')
+    }
   }
+
+  const refreshBalances = async () => {
+    setIsRefreshingBalances(true)
+    await fetchAllBalances(wallets)
+    toast.success('Balances refreshed!')
+    setIsRefreshingBalances(false)
+  }
+
+  const requestFaucet = async (walletId: string, network: string) => {
+    try {
+      const response = await backendAPI.wallets.requestFaucet(walletId, 'eth')
+      if (response.success) {
+        toast.success('Faucet funds requested! Check the transaction:', {
+          duration: 5000
+        })
+        // Refresh balances after faucet
+        setTimeout(() => refreshBalances(), 3000)
+      } else {
+        toast.error('Failed to request faucet funds')
+      }
+    } catch (error: any) {
+      console.error('Error requesting faucet:', error)
+      toast.error(error.message || 'Failed to request faucet funds')
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard!')
+  }
+
+  const copyToClipboardSafe = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Payment link copied to clipboard')
+      return
+    } catch (err) {
+      try {
+        const tmp = document.createElement('textarea')
+        tmp.value = text
+        tmp.style.position = 'fixed'
+        tmp.style.opacity = '0'
+        document.body.appendChild(tmp)
+        tmp.focus()
+        tmp.select()
+        document.execCommand('copy')
+        document.body.removeChild(tmp)
+        toast.success('Payment link copied')
+        return
+      } catch (e) {
+        // As a final fallback, show the URL so the user can copy manually
+        window.prompt('Copy payment link:', text)
+      }
+    }
+  }
+
+  const getCryptoLogo = (currency: string | undefined | null) => {
+    const logo = cryptoLogoService.getLogoUrl(currency)
+    return logo
+  }
+
+  const getNetworkIcon = (network: string) => {
+    const iconMap: Record<string, string> = {
+      'ethereum': '🔷',
+      'bitcoin': '🟠', 
+      'solana': '🟣',
+      'tron': '🔴',
+      'bsc': '🟡',
+      'polygon': '🟣',
+      'base': '🔵',
+      'arbitrum': '🔴'
+    }
+    return iconMap[network] || '🔷'
+  }
+
+  const getCurrencyIcon = (currency: string | undefined | null) => {
+    if (!currency) return '🔷'
+    const iconMap: Record<string, string> = {
+      'ETH': '🔷',
+      'BTC': '🟠',
+      'SOL': '🟣',
+      'TRX': '🔴',
+      'BNB': '🟡',
+      'MATIC': '🟣',
+      'USDC': '🔵',
+      'USDT': '🟢'
+    }
+    return iconMap[currency.toUpperCase()] || '🔷'
+  }
+
+  const getNetworkName = (network: string) => {
+    const nameMap: Record<string, string> = {
+      'ethereum': 'Ethereum',
+      'bitcoin': 'Bitcoin',
+      'solana': 'Solana', 
+      'tron': 'TRON',
+      'bsc': 'BNB Smart Chain',
+      'polygon': 'Polygon',
+      'base': 'Base',
+      'arbitrum': 'Arbitrum'
+    }
+    return nameMap[network] || network
+  }
+
+  const getCurrencyName = (currency: string | undefined | null, network: string) => {
+    if (!currency) return getNetworkName(network)
+    const nameMap: Record<string, string> = {
+      'ETH': 'Ethereum',
+      'BTC': 'Bitcoin',
+      'SOL': 'Solana',
+      'TRX': 'TRON',
+      'BNB': 'BNB',
+      'MATIC': 'Polygon',
+      'USDC': 'USD Coin',
+      'USDT': 'Tether'
+    }
+    return nameMap[currency.toUpperCase()] || getNetworkName(network)
+  }
+
+  const filteredNetworks = networks.filter(network => 
+    showTestnets ? network.testnet : !network.testnet
+  )
+
+  const totalBalance = Object.values(balances).reduce((sum, balance) => {
+    return sum + parseFloat(balance || '0')
+  }, 0)
 
   return (
-    <Layout>
+    <>
       <Head>
-        <title>Vendor Wallets - SwiftPay</title>
-        <meta name="description" content="Manage your vendor wallet settings and crypto holdings" />
+        <title>Wallet Management - SwiftPay</title>
+        <meta name="description" content="Manage your cryptocurrency wallets with Coinbase Cloud" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <span className="ml-4 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                  VENDOR WALLETS
-                </span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-extrabold text-gray-900">Wallet Management</h1>
+                <p className="mt-2 text-gray-600">
+                  Secure cryptocurrency wallets powered by Coinbase Cloud Server Wallets v2
+                </p>
               </div>
-              <div className="flex items-center space-x-4">
-                <Link href="/merchant-dashboard" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
-                  Back to Dashboard
-                </Link>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={refreshBalances}
+                  disabled={isRefreshingBalances}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <ArrowPathIcon className={`h-4 w-4 mr-2 ${isRefreshingBalances ? 'animate-spin' : ''}`} />
+                  Refresh Balances
+                </button>
+                <button
+                  onClick={createMissingWallets}
+                  disabled={isCreatingWallet}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  <SparklesIcon className="h-4 w-4 mr-2" />
+                  Create Missing Wallets
+                </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-            {/* Right Navigation */}
-            <div className="lg:col-span-1">
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    Wallet Management
-                  </h3>
-                  
-                  <nav className="space-y-2">
-                    {navigationItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => setSelectedTab(item.id)}
-                        className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                          selectedTab === item.id
-                            ? 'bg-indigo-100 text-indigo-700'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5 mr-3" />
-                        {item.name}
-                      </button>
-                    ))}
-                  </nav>
-
-                  {/* Wallet Type Toggle */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Wallet Type</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => setWalletType('centralized')}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors duration-200 ${
-                          walletType === 'centralized'
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <CurrencyDollarIcon className="h-5 w-5 mr-2 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Centralized</p>
-                            <p className="text-xs text-gray-500">Easy, instant, managed</p>
-                          </div>
-                        </div>
-                      </button>
-                      
-                      <button
-                        onClick={() => setWalletType('individual')}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors duration-200 ${
-                          walletType === 'individual'
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <KeyIcon className="h-5 w-5 mr-2 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Individual</p>
-                            <p className="text-xs text-gray-500">Self-custody, decentralized</p>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <WalletIcon className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Wallets</dt>
+                      <dd className="text-lg font-medium text-gray-900">{wallets.length}</dd>
+                    </dl>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3">
-              {/* Wallet Overview Tab */}
-              {selectedTab === 'overview' && (
-                <div className="space-y-6">
-                  {/* Wallet Type Comparison */}
-                  <div className="bg-white shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                        Choose Your Wallet Type
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <CurrencyDollarIcon className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Balance</dt>
+                      <dd className="text-lg font-medium text-gray-900">{totalBalance.toFixed(4)}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Security</dt>
+                      <dd className="text-lg font-medium text-gray-900">Coinbase Cloud</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <GlobeAltIcon className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Networks</dt>
+                      <dd className="text-lg font-medium text-gray-900">{networks.length}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              {/* Auto-Created Wallets Info */}
+              <div className="mb-8">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <SparklesIcon className="h-5 w-5 text-blue-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">
+                        Auto-Created Wallets
                       </h3>
-                      
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        {/* Centralized Wallet */}
-                        <div className={`p-6 border-2 rounded-lg transition-colors duration-200 ${
-                          walletType === 'centralized' 
-                            ? 'border-indigo-500 bg-indigo-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                          <div className="flex items-center mb-4">
-                            <CurrencyDollarIcon className="h-8 w-8 text-indigo-600 mr-3" />
-                            <div>
-                              <h4 className="text-lg font-medium text-gray-900">Centralized Balance</h4>
-                              <p className="text-sm text-gray-500">SwiftPay managed wallet</p>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3 mb-6">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                              Instant settlements
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                              No gas fees
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                              Easy to use
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
-                              Platform custody
-                            </div>
-                          </div>
-                          
-                          <div className="text-center">
-                            <p className="text-2xl font-bold text-gray-900 mb-1">
-                              ${centralizedBalance.totalUSD.toFixed(2)}
-                            </p>
-                            <p className="text-sm text-gray-500">Total Balance</p>
-                          </div>
-                        </div>
-
-                        {/* Individual Wallets */}
-                        <div className={`p-6 border-2 rounded-lg transition-colors duration-200 ${
-                          walletType === 'individual' 
-                            ? 'border-indigo-500 bg-indigo-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                          <div className="flex items-center mb-4">
-                            <KeyIcon className="h-8 w-8 text-indigo-600 mr-3" />
-                            <div>
-                              <h4 className="text-lg font-medium text-gray-900">Individual Wallets</h4>
-                              <p className="text-sm text-gray-500">Self-custody wallets</p>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3 mb-6">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                              Full control
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                              Decentralized
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
-                              Gas fees apply
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
-                              Key management
-                            </div>
-                          </div>
-                          
-                          <div className="text-center">
-                            <p className="text-2xl font-bold text-gray-900 mb-1">
-                              {individualWallets.length}
-                            </p>
-                            <p className="text-sm text-gray-500">Active Wallets</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Migration Options */}
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <h4 className="text-sm font-medium text-gray-900 mb-3">Migration Options</h4>
-                        <div className="flex space-x-4">
-                          <button
-                            onClick={handleMigrateToIndividual}
-                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                          >
-                            Switch to Individual Wallets
-                          </button>
-                          <button
-                            onClick={handleMigrateToCentralized}
-                            className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                          >
-                            Switch to Centralized
-                          </button>
-                        </div>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>
+                          Your account comes with pre-configured wallets for major cryptocurrencies:
+                          <span className="font-semibold"> Bitcoin, Ethereum, Solana, TRON, and BNB</span>
+                        </p>
+                        <p className="mt-1">
+                          These wallets are ready to use immediately and secured by Coinbase Cloud infrastructure.
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Individual Wallets Tab */}
-              {selectedTab === 'individual' && (
-                <div className="space-y-6">
-                  {/* Create New Wallet */}
-                  <div className="bg-white shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900">
-                          Individual Wallets
-                        </h3>
-                        <button
-                          onClick={handleCreateWallet}
-                          disabled={isCreatingWallet}
-                          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center"
-                        >
-                          <PlusIcon className="h-4 w-4 mr-2" />
-                          {isCreatingWallet ? 'Creating...' : 'Create Wallet'}
-                        </button>
+              {/* Wallets List */}
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : wallets.length === 0 ? (
+                <div className="text-center py-12">
+                  <WalletIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No wallets</h3>
+                  <p className="mt-1 text-sm text-gray-500">Get started by creating your first wallet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {wallets.map((wallet) => (
+                    <div key={wallet.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                              <img 
+                                src={getCryptoLogo(wallet.currency)}
+                                alt={`${wallet.currency} logo`}
+                                className="w-8 h-8 object-contain"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  const fallback = target.nextElementSibling as HTMLSpanElement
+                                  if (fallback) fallback.style.display = 'block'
+                                }}
+                              />
+                              <span className="text-2xl" style={{ display: 'none' }}>
+                                {getCurrencyIcon(wallet.currency)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="text-lg font-medium text-gray-900">
+                                {getCurrencyName(wallet.currency, wallet.network)} Wallet
+                              </h4>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <ShieldCheckIcon className="h-3 w-3 mr-1" />
+                                Coinbase Cloud
+                              </span>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <SparklesIcon className="h-3 w-3 mr-1" />
+                                Auto-Created
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 font-mono">
+                              {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Created {new Date(wallet.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="text-lg font-medium text-gray-900">
+                              {balances[wallet.id] || '0.0000'} {wallet.currency}
+                            </p>
+                            <p className="text-sm text-gray-500">Balance</p>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)}
+                              className="p-2 text-gray-400 hover:text-gray-600"
+                              title="Toggle Details"
+                            >
+                              {expandedWallet === wallet.id ? (
+                                <EyeSlashIcon className="h-5 w-5" />
+                              ) : (
+                                <EyeIcon className="h-5 w-5" />
+                              )}
+                            </button>
+                            
+                            <button
+                              onClick={() => copyToClipboard(wallet.address)}
+                              className="p-2 text-gray-400 hover:text-gray-600"
+                              title="Copy Address"
+                            >
+                              <DocumentDuplicateIcon className="h-5 w-5" />
+                            </button>
+                            
+                            <button
+                              onClick={async () => {
+                                const token = localStorage.getItem('swiftpay_token')
+                                if (!token) {
+                                  toast.error('Please log in to create payment links')
+                                  return
+                                }
+                                setCreatingLinkFor(wallet.id)
+                                try {
+                                  const result = await backendAPI.paymentRequests.create('1', wallet.currency)
+                                  if (result.success && result.data?.checkoutUrl) {
+                                    const url = result.data.checkoutUrl as string
+                                    console.log('Payment link:', url)
+                                    await copyToClipboardSafe(url)
+                                    try { window.open(url, '_blank', 'noopener') } catch {}
+                                  } else {
+                                    toast.error(result.error || 'Failed to create link')
+                                  }
+                                } catch (err: any) {
+                                  console.error('Create payment link error:', err)
+                                  toast.error(err.message || 'Failed to create link')
+                                } finally {
+                                  setCreatingLinkFor(null)
+                                }
+                              }}
+                              className="p-2 text-gray-400 hover:text-gray-600"
+                              title="Create Payment Link"
+                            >
+                              <LinkIcon className="h-5 w-5" />
+                            </button>
+
+                            <button
+                              onClick={() => setShowQRCode(showQRCode === wallet.id ? null : wallet.id)}
+                              className="p-2 text-gray-400 hover:text-gray-600"
+                              title="Show QR Code"
+                            >
+                              <QrCodeIcon className="h-5 w-5" />
+                            </button>
+                            
+                            <button
+                              onClick={() => deleteWallet(wallet.id)}
+                              className="p-2 text-red-400 hover:text-red-600"
+                              title="Delete Wallet"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      
-                      <p className="text-sm text-gray-600 mb-6">
-                        Manage your self-custody crypto wallets. You control the private keys and have full ownership of your funds.
-                      </p>
 
-                      {/* Wallet List */}
-                      <div className="space-y-4">
-                        {individualWallets.map((wallet) => (
-                          <div key={wallet.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
-                                  <span className="text-xl">
-                                    {wallet.currency === 'ETH' ? '🔷' : '🟠'}
-                                  </span>
+                      {/* Expanded Details */}
+                      {expandedWallet === wallet.id && (
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900 mb-2">Wallet Details</h5>
+                              <div className="space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-gray-500">Address:</span>
+                                  <span className="text-sm font-mono text-gray-900">{wallet.address}</span>
                                 </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {wallet.network} Wallet
-                                  </p>
-                                  <p className="text-xs text-gray-500 font-mono">
-                                    {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Created {new Date(wallet.createdAt).toLocaleDateString()}
-                                  </p>
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-gray-500">Network:</span>
+                                  <span className="text-sm text-gray-900">{getNetworkName(wallet.network)}</span>
                                 </div>
-                              </div>
-                              
-                              <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {wallet.balance.toFixed(4)} {wallet.currency}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  ${wallet.usdValue.toFixed(2)}
-                                </p>
-                                <div className="flex items-center mt-1">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    wallet.isActive 
-                                      ? 'text-green-600 bg-green-100' 
-                                      : 'text-gray-600 bg-gray-100'
-                                  }`}>
-                                    {wallet.isActive ? 'Active' : 'Inactive'}
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-gray-500">Currency:</span>
+                                  <span className="text-sm text-gray-900">{wallet.currency}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-gray-500">Created:</span>
+                                  <span className="text-sm text-gray-900">
+                                    {new Date(wallet.created_at).toLocaleString()}
                                   </span>
                                 </div>
                               </div>
                             </div>
                             
-                            {/* Private Key (Hidden by default) */}
-                            <div className="mt-4 pt-4 border-t border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">Private Key:</span>
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900 mb-2">Actions</h5>
+                              <div className="space-y-2">
                                 <button
-                                  onClick={() => setShowPrivateKey(!showPrivateKey)}
-                                  className="flex items-center text-xs text-indigo-600 hover:text-indigo-700"
+                                  onClick={() => requestFaucet(wallet.id, wallet.network)}
+                                  className="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
                                 >
-                                  {showPrivateKey ? (
-                                    <>
-                                      <EyeSlashIcon className="h-3 w-3 mr-1" />
-                                      Hide
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeIcon className="h-3 w-3 mr-1" />
-                                      Show
-                                    </>
-                                  )}
+                                  <BeakerIcon className="h-4 w-4 mr-2" />
+                                  Request Test Funds
+                                </button>
+                                
+                                <button
+                                  onClick={() => copyToClipboard(wallet.address)}
+                                  className="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                >
+                                  <DocumentDuplicateIcon className="h-4 w-4 mr-2" />
+                                  Copy Address
                                 </button>
                               </div>
-                              {showPrivateKey && (
-                                <p className="mt-1 text-xs font-mono text-gray-700 bg-gray-100 p-2 rounded">
-                                  {wallet.privateKey}
-                                </p>
-                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                        </div>
+                      )}
 
-              {/* Centralized Balance Tab */}
-              {selectedTab === 'centralized' && (
-                <div className="space-y-6">
-                  <div className="bg-white shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                        Centralized Balance
-                      </h3>
-                      
-                      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                        <div className="flex items-center">
-                          <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
-                          <p className="text-sm text-blue-800">
-                            Your funds are securely held in SwiftPay's managed wallets. 
-                            You can withdraw to your personal wallets anytime.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Balance Summary */}
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Total Balance</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            ${centralizedBalance.totalUSD.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Available</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            ${centralizedBalance.totalUSD.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Pending</p>
-                          <p className="text-2xl font-bold text-gray-900">$0.00</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Currencies</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            {centralizedBalance.holdings.length}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Holdings Breakdown */}
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 mb-3">Holdings Breakdown</h4>
-                        <div className="space-y-3">
-                          {centralizedBalance.holdings.map((holding) => (
-                            <div key={holding.currency} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div className="flex items-center">
-                                <span className="text-2xl mr-3">{holding.icon}</span>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{holding.currency}</p>
-                                  <p className="text-xs text-gray-500">
-                                    {holding.balance.toFixed(4)} {holding.currency}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">
-                                  ${holding.usdValue.toFixed(2)}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {((holding.usdValue / centralizedBalance.totalUSD) * 100).toFixed(1)}%
-                                </p>
+                      {/* QR Code Modal */}
+                      {showQRCode === wallet.id && (
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          <div className="text-center">
+                            <h5 className="text-sm font-medium text-gray-900 mb-4">Wallet QR Code</h5>
+                            <div className="inline-block p-4 bg-white border-2 border-gray-200 rounded-lg">
+                              <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
+                                <QrCodeIcon className="h-24 w-24 text-gray-400" />
                               </div>
                             </div>
-                          ))}
+                            <p className="mt-2 text-xs text-gray-500">
+                              Scan to send funds to this wallet
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Other tabs placeholder */}
-              {selectedTab === 'settings' && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Wallet Settings
-                    </h3>
-                    <p className="text-gray-600">Wallet settings and preferences will be available here.</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedTab === 'analytics' && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Wallet Analytics
-                    </h3>
-                    <p className="text-gray-600">Wallet analytics and insights will be available here.</p>
-                  </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   )
 }

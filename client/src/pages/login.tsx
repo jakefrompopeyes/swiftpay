@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { backendAPI } from '../services/backendAPI'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -31,26 +32,19 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      const result = await response.json()
+      const result = await backendAPI.auth.login(data.email, data.password)
 
       if (result.success) {
-        localStorage.setItem('token', result.data.token)
-        localStorage.setItem('user', JSON.stringify(result.data.user))
+        localStorage.setItem('swiftpay_token', result.data.token)
+        localStorage.setItem('swiftpay_user', JSON.stringify(result.data.user))
         toast.success('Login successful!')
-        router.push('/dashboard')
+        router.push('/vendor-dashboard')
       } else {
-        toast.error(result.error || 'Login failed')
+        toast.error('Login failed')
       }
-    } catch (error) {
-      toast.error('An error occurred during login')
+    } catch (error: any) {
+      console.error('Login error:', error)
+      toast.error(error.message || 'Login failed')
     } finally {
       setIsLoading(false)
     }

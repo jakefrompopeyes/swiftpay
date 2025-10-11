@@ -109,6 +109,13 @@ export default function LeftNavigation() {
           description: 'Create payment links'
         },
         {
+          id: 'merchant-links',
+          name: 'Payment Links',
+          href: '/merchant-links',
+          icon: DocumentTextIcon,
+          description: 'View payment links'
+        },
+        {
           id: 'merchant-tools',
           name: 'Integration Tools',
           href: '/merchant-tools',
@@ -134,13 +141,6 @@ export default function LeftNavigation() {
     {
       title: 'Payment Flow',
       items: [
-        {
-          id: 'checkout',
-          name: 'Checkout',
-          href: '/checkout',
-          icon: CreditCardIcon,
-          description: 'Payment checkout'
-        },
         {
           id: 'payment-demo',
           name: 'Payment Demo',

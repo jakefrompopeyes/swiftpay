@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import Head from 'next/head'
+import { useState } from 'react'
+import { backendAPI } from '../services/backendAPI'
 
 interface SwiftPayButtonProps {
   amount?: number
@@ -20,21 +20,23 @@ export default function SwiftPayButton({
 }: SwiftPayButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleClick = () => {
+  const handleClick = async () => {
     setIsLoading(true)
-    
-    // Build checkout URL
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.com'
-    const params = new URLSearchParams()
-    
-    if (amount) params.append('amount', amount.toString())
-    if (description) params.append('description', description)
-    if (merchant) params.append('merchant', merchant)
-    
-    const checkoutUrl = `${baseUrl}/checkout?${params.toString()}`
-    
-    // Redirect to checkout
-    window.location.href = checkoutUrl
+    try {
+      const usdAmount = amount ? String(amount) : '1.0'
+      const currencySymbol = 'ETH'
+      const result = await backendAPI.paymentRequests.create(usdAmount, currencySymbol, description)
+      if (result.success && result.data?.checkoutUrl) {
+        window.location.href = result.data.checkoutUrl
+      } else {
+        throw new Error(result.error || 'Failed to create payment request')
+      }
+    } catch (e) {
+      console.error('SwiftPayButton error:', e)
+      alert('Unable to start checkout. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getButtonText = () => {
@@ -63,12 +65,7 @@ export default function SwiftPayButton({
   }
 
   return (
-    <>
-      <Head>
-        <title>SwiftPay Button Widget</title>
-      </Head>
-      
-      <button
+    <button
         onClick={handleClick}
         disabled={isLoading}
         className={getButtonStyles()}
@@ -88,36 +85,22 @@ export default function SwiftPayButton({
           </>
         )}
       </button>
-    </>
   )
 }
 
 // Widget initialization script for easy embedding
+// Optional global helper for non-React integrations (no DOM mutation to avoid hydration issues)
 if (typeof window !== 'undefined') {
   // @ts-ignore
   window.SwiftPay = {
-    Button: SwiftPayButton,
-    init: () => {
-      // Auto-initialize any SwiftPay buttons on the page
-      const buttons = document.querySelectorAll('[data-swiftpay-button]')
-      buttons.forEach((button) => {
-        const amount = button.getAttribute('data-amount')
-        const description = button.getAttribute('data-description')
-        const merchant = button.getAttribute('data-merchant')
-        const style = button.getAttribute('data-style') || 'primary'
-        const size = button.getAttribute('data-size') || 'medium'
-        
-        // Replace the placeholder with actual SwiftPay button
-        const buttonElement = document.createElement('div')
-        buttonElement.innerHTML = `
-          <a href="/checkout?amount=${amount || ''}&description=${description || ''}&merchant=${merchant || ''}" 
-             class="swiftpay-button swiftpay-button-${style} swiftpay-button-${size}">
-            Pay with SwiftPay
-          </a>
-        `
-        
-        button.parentNode?.replaceChild(buttonElement.firstChild!, button)
-      })
+    createCheckoutUrl: (amount?: number, description?: string, merchantId?: string, currency: string = 'ETH') => {
+      const baseUrl = window.location.origin.replace(/:\d+$/, ':3001')
+      const params = new URLSearchParams()
+      if (amount) params.append('amount', String(amount))
+      if (description) params.append('description', description)
+      if (merchantId) params.append('mid', merchantId)
+      if (currency) params.append('currency', currency)
+      return `${baseUrl}/r/pay?${params.toString()}`
     }
   }
 }

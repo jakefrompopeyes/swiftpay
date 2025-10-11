@@ -1,5 +1,42 @@
 // API Configuration for SwiftPay
 export const API_CONFIG = {
+  // SwiftPay Backend API Configuration
+  BACKEND: {
+    BASE_URL: process.env.NODE_ENV === 'production' 
+      ? 'https://your-backend-url.com' // Will be updated when we deploy
+      : 'http://localhost:3001',
+    ENDPOINTS: {
+      AUTH: {
+        REGISTER: '/api/auth/register',
+        LOGIN: '/api/auth/login',
+        VERIFY: '/api/auth/verify'
+      },
+      USERS: {
+        PROFILE: '/api/users/profile'
+      },
+      WALLETS: {
+        LIST: '/api/wallets',
+        CREATE: '/api/wallets',
+        BALANCE: '/api/wallets/:id/balance',
+        DELETE: '/api/wallets/:id'
+      },
+      TRANSACTIONS: {
+        LIST: '/api/transactions',
+        CREATE: '/api/transactions',
+        DETAIL: '/api/transactions/:id'
+      },
+      VENDORS: {
+        PROFILE: '/api/vendors/profile',
+        ANALYTICS: '/api/vendors/analytics'
+      },
+      PUBLIC: {
+        HEALTH: '/api/public/health',
+        PRICES: '/api/public/prices',
+        CRYPTOCURRENCIES: '/api/public/cryptocurrencies'
+      }
+    }
+  },
+
   // CoinGecko API Configuration
   COINGECKO: {
     BASE_URL: 'https://api.coingecko.com/api/v3',

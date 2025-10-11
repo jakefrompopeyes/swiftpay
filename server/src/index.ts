@@ -1,9 +1,11 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 
@@ -17,6 +19,9 @@ import walletRoutes from './routes/wallets';
 import transactionRoutes from './routes/transactions';
 import vendorRoutes from './routes/vendors';
 import apiRoutes from './routes/api';
+import paymentRequestRoutes from './routes/paymentRequests';
+import webhookRoutes from './routes/webhooks';
+import redirectRoutes from './routes/redirects';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -26,8 +31,6 @@ import { authenticateToken } from './middleware/auth';
 import { BlockchainService } from './services/blockchain';
 import { PriceService } from './services/price';
 
-dotenv.config();
-
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
@@ -36,17 +39,34 @@ const wss = new WebSocketServer({ server });
 app.use(helmet());
 app.use(compression());
 
-// Rate limiting
+// Rate limiting (relaxed for development)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs (increased for dev)
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.NEXT_PUBLIC_APP_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:3003',
+      'http://localhost:3004',
+      'http://localhost:3005',
+      'http://localhost:3006',
+      'http://localhost:3007',
+      'http://localhost:3008',
+      'http://localhost:3009',
+      undefined // allow same-origin/non-browser tools
+    ]
+    if (!origin || allowed.includes(origin)) return callback(null, true)
+    callback(null, false)
+  },
   credentials: true
 }));
 
@@ -73,7 +93,7 @@ app.get('/health', async (req, res) => {
       version: '1.0.0',
       database: 'Connected'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       status: 'ERROR',
       timestamp: new Date().toISOString(),
@@ -91,6 +111,9 @@ app.use('/api/wallets', authenticateToken, walletRoutes);
 app.use('/api/transactions', authenticateToken, transactionRoutes);
 app.use('/api/vendors', authenticateToken, vendorRoutes);
 app.use('/api/public', apiRoutes);
+app.use('/api/payment-requests', paymentRequestRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/r', redirectRoutes);
 
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
@@ -105,7 +128,7 @@ wss.on('connection', (ws, req) => {
       switch (data.type) {
         case 'subscribe_transactions':
           // Subscribe user to transaction updates
-          ws.userId = data.userId;
+          (ws as any).userId = data.userId;
           break;
         case 'ping':
           ws.send(JSON.stringify({ type: 'pong' }));

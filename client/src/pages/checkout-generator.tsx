@@ -18,16 +18,15 @@ export default function CheckoutGenerator() {
 
   const generateCheckoutLink = () => {
     if (!amount || !merchantName) return
-
-    const baseUrl = window.location.origin
+    const origin = window.location.origin
+    const backendOrigin = origin.replace(/:\d+$/, ':3001')
     const params = new URLSearchParams({
       amount: amount,
       description: description,
-      merchant: merchantName
+      mid: merchantName
     })
-
-    const checkoutUrl = `${baseUrl}/checkout?${params.toString()}`
-    setGeneratedLink(checkoutUrl)
+    const url = `${backendOrigin}/r/pay?${params.toString()}`
+    setGeneratedLink(url)
   }
 
   const copyToClipboard = async () => {

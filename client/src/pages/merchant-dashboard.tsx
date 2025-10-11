@@ -15,7 +15,6 @@ import {
   WalletIcon
 } from '@heroicons/react/24/outline'
 import RevenueChart from '../components/RevenueChart'
-import Layout from '../components/Layout'
 
 export default function MerchantDashboard() {
   const [merchantStats, setMerchantStats] = useState({
@@ -120,7 +119,7 @@ export default function MerchantDashboard() {
   }
 
   return (
-    <Layout>
+    <>
       <Head>
         <title>Merchant Dashboard - SwiftPay</title>
         <meta name="description" content="Manage your SwiftPay merchant account" />
@@ -369,6 +368,6 @@ export default function MerchantDashboard() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   )
 }

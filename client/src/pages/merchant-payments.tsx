@@ -137,7 +137,7 @@ export default function MerchantPayments() {
   }
 
   return (
-    <Layout>
+    <>
       <Head>
         <title>Merchant Payments - SwiftPay</title>
         <meta name="description" content="Manage your merchant payments and withdrawals" />
@@ -484,6 +484,6 @@ export default function MerchantPayments() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   )
 }
