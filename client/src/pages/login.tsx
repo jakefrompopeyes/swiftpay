@@ -131,3 +131,7 @@ export default function Login() {
   )
 }
 
+// Remove app-wide sidebar/navigation for auth page
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(Login as any).getLayout = (page: React.ReactElement) => page
+

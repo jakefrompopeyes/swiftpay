@@ -181,3 +181,7 @@ export default function Register() {
     </>
   )
 }
+
+// Remove app-wide sidebar/navigation for auth page
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(Register as any).getLayout = (page: React.ReactElement) => page
