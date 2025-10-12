@@ -13,7 +13,7 @@ RUN npm ci
 COPY . .
 
 # Build the application
-RUN npx tsc
+RUN npx typescript
 
 # Expose port
 EXPOSE 3001
