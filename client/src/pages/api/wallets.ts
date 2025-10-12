@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../lib/auth-middleware';
+import { coinbaseCloudService } from '../../lib/coinbase-cloud';
 
 export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -38,51 +39,54 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       try {
         const { network = 'ethereum' } = req.body;
 
-        // Create a mock wallet with proper schema
-        const currencyMap: { [key: string]: string } = {
-          'ethereum': 'ETH',
-          'bitcoin': 'BTC',
-          'polygon': 'MATIC',
-          'solana': 'SOL',
-          'base': 'ETH'
-        };
+        console.log(`Creating ${network} wallet for user ${req.user!.id}`);
 
-        const mockWallet = {
-          id: `wallet_${Date.now()}`,
+        // Create wallet using Coinbase Cloud
+        const walletResult = await coinbaseCloudService.createWallet(network);
+
+        // Prepare wallet data for database
+        const walletData = {
+          // Let Supabase generate the UUID automatically
           user_id: req.user!.id,
-          address: `0x${Math.random().toString(16).substr(2, 40)}`,
-          private_key: `0x${Math.random().toString(16).substr(2, 64)}`,
-          network,
-          currency: currencyMap[network] || 'ETH',
-          mnemonic: null,
-          balance: 0,
+          address: walletResult.address,
+          private_key: `coinbase_cloud_${walletResult.walletId}`, // Store Coinbase Cloud wallet ID
+          network: walletResult.network,
+          currency: walletResult.currency,
+          mnemonic: null, // Coinbase Cloud handles key management
+          balance: 0, // Will be updated with real balance later
           is_active: true,
           created_at: new Date().toISOString()
         };
 
         const { data: wallet, error } = await supabaseAdmin
           .from('wallets')
-          .insert(mockWallet)
+          .insert(walletData)
           .select('id, address, network, currency, balance, is_active, created_at')
           .single();
 
         if (error) {
+          console.error('Database error:', error);
           return res.status(500).json({
             success: false,
-            error: 'Failed to create wallet'
+            error: 'Failed to save wallet to database'
           });
         }
 
+        console.log(`✅ Created ${network} wallet: ${walletResult.address}`);
+
         res.json({
           success: true,
-          message: 'Wallet created successfully',
-          data: wallet
+          message: `${walletResult.currency} wallet created successfully via Coinbase Cloud`,
+          data: {
+            ...wallet,
+            coinbaseWalletId: walletResult.walletId
+          }
         });
       } catch (error: any) {
         console.error('Create wallet error:', error);
         res.status(500).json({
           success: false,
-          error: 'Failed to create wallet'
+          error: error.message || 'Failed to create wallet'
         });
       }
     });
