@@ -2,8 +2,8 @@
 export const API_CONFIG = {
   // SwiftPay Backend API Configuration
   BACKEND: {
-    // Use Vercel Functions (same domain as frontend)
-    BASE_URL: '',
+    // Use the working Vercel deployment with API routes
+    BASE_URL: 'https://swiftpay-q6peda3we-jakefrompopeyes-projects.vercel.app',
     ENDPOINTS: {
       AUTH: {
         REGISTER: '/api/auth/register',
