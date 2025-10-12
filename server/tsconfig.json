@@ -32,6 +32,6 @@
       "@/middleware/*": ["src/middleware/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
