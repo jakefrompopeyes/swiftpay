@@ -26,9 +26,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         .eq('is_active', true);
 
       if (fetchError) {
+        console.error('Fetch existing wallets error:', fetchError);
         return res.status(500).json({
           success: false,
-          error: 'Failed to fetch existing wallets'
+          error: 'Failed to fetch existing wallets',
+          details: fetchError.message
         });
       }
 
@@ -69,9 +71,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         .select('id, address, network, currency, created_at');
 
       if (createError) {
+        console.error('Create wallets error:', createError);
         return res.status(500).json({
           success: false,
-          error: 'Failed to create missing wallets'
+          error: 'Failed to create missing wallets',
+          details: createError.message
         });
       }
 
@@ -87,7 +91,8 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       console.error('Create missing wallets error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to create missing wallets'
+        error: 'Failed to create missing wallets',
+        details: error.message || 'Unknown error'
       });
     }
   });
