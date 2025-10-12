@@ -1,14 +1,12 @@
 {
-  "rewrites": [
-    { "source": "/api/public/:path*", "destination": "/api/:path*" }
-  ]
-}
-{
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "rewrites": [
+    { "source": "/api/public/:path*", "destination": "/api/:path*" }
+  ],
   "env": {
     "NEXT_PUBLIC_COINGECKO_API_KEY": "CG-4t9T7hqedfTufESUnfqJu4mr"
   }
