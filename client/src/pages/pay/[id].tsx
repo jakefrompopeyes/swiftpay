@@ -29,7 +29,7 @@ export default function PayRequest() {
 
   useEffect(() => {
     if (!id) return
-    fetch(`http://localhost:3001/api/payment-requests/${id}`)
+    fetch(`/api/payment-requests/${id}`)
       .then(r => r.json())
       .then(async (res) => {
         if (res.success) {
@@ -40,7 +40,7 @@ export default function PayRequest() {
       })
 
     // load merchant wallets (accepted currencies)
-    fetch(`http://localhost:3001/api/payment-requests/${id}/options`)
+    fetch(`/api/payment-requests/${id}/options`)
       .then(r => r.json())
       .then((res) => { 
         if (res.success) {
@@ -53,7 +53,7 @@ export default function PayRequest() {
       })
 
     // load prices for USD conversion
-    fetch('http://localhost:3001/api/public/prices')
+    fetch('/api/prices')
       .then(r => r.json())
       .then((res) => {
         if (res.success) setPrices(res.data || {})
@@ -68,7 +68,7 @@ export default function PayRequest() {
     })
 
     const timer = setInterval(async () => {
-      const r = await fetch(`http://localhost:3001/api/payment-requests/${id}/status`)
+      const r = await fetch(`/api/payment-requests/${id}/status`)
       const j = await r.json()
       if (j.success) {
         setStatus(j.data.status)
@@ -77,7 +77,7 @@ export default function PayRequest() {
       // opportunistic chain check for auto-complete
       if (j.success && j.data.status !== 'completed') {
         try {
-          await fetch(`http://localhost:3001/api/payment-requests/${id}/check-chain`, { method: 'POST', credentials: 'include' })
+          await fetch(`/api/payment-requests/${id}/check-chain`, { method: 'POST', credentials: 'include' })
         } catch {}
       }
     }, 4000)

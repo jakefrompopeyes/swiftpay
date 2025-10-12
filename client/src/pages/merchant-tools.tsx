@@ -41,7 +41,7 @@ export default function MerchantTools() {
   }, [])
 
   const generateCheckoutUrl = () => {
-    const origin = mounted && typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'
+    const origin = mounted && typeof window !== 'undefined' ? window.location.origin : ''
     const backendOrigin = origin.replace(/:\d+$/, ':3001')
     const params = new URLSearchParams()
     if (amount) params.append('amount', amount)

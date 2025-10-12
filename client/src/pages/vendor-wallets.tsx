@@ -214,7 +214,7 @@ export default function VendorWallets() {
   const createMissingWallets = async () => {
     try {
       setIsCreatingWallet(true)
-      const response = await fetch('http://localhost:3001/api/wallets/create-missing', {
+      const response = await fetch('/api/wallets/create-missing', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('swiftpay_token')}`,
