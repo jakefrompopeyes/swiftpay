@@ -11,11 +11,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
     try {
       // Define supported networks and their currencies
       const supportedNetworks = [
-        { network: 'ethereum', currency: 'ETH' },
         { network: 'bitcoin', currency: 'BTC' },
-        { network: 'polygon', currency: 'MATIC' },
+        { network: 'ethereum', currency: 'ETH' },
         { network: 'solana', currency: 'SOL' },
-        { network: 'base', currency: 'ETH' }
+        { network: 'tron', currency: 'TRX' },
+        { network: 'binance', currency: 'BNB' }
       ];
 
       // Get existing wallets for the user

@@ -11,15 +11,6 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       // Return supported networks
       const networks = [
         {
-          network: 'ethereum',
-          name: 'Ethereum',
-          currency: 'ETH',
-          type: 'EVM',
-          icon: '🔷',
-          description: 'Ethereum Mainnet',
-          testnet: false
-        },
-        {
           network: 'bitcoin',
           name: 'Bitcoin',
           currency: 'BTC',
@@ -29,12 +20,12 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           testnet: false
         },
         {
-          network: 'polygon',
-          name: 'Polygon',
-          currency: 'MATIC',
+          network: 'ethereum',
+          name: 'Ethereum',
+          currency: 'ETH',
           type: 'EVM',
-          icon: '🟣',
-          description: 'Polygon Mainnet',
+          icon: '🔷',
+          description: 'Ethereum Mainnet',
           testnet: false
         },
         {
@@ -47,12 +38,21 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           testnet: false
         },
         {
-          network: 'base',
-          name: 'Base',
-          currency: 'ETH',
+          network: 'tron',
+          name: 'TRON',
+          currency: 'TRX',
+          type: 'TRON',
+          icon: '🔴',
+          description: 'TRON Mainnet',
+          testnet: false
+        },
+        {
+          network: 'binance',
+          name: 'BNB Smart Chain',
+          currency: 'BNB',
           type: 'EVM',
-          icon: '🔵',
-          description: 'Base Mainnet',
+          icon: '🟡',
+          description: 'BNB Smart Chain',
           testnet: false
         }
       ];

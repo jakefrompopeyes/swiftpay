@@ -64,6 +64,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // Create default wallets for the new user
+    const supportedNetworks = [
+      { network: 'bitcoin', currency: 'BTC' },
+      { network: 'ethereum', currency: 'ETH' },
+      { network: 'solana', currency: 'SOL' },
+      { network: 'tron', currency: 'TRX' },
+      { network: 'binance', currency: 'BNB' }
+    ];
+
+    const walletsToCreate = supportedNetworks.map(network => ({
+      id: `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      user_id: user.id,
+      address: `0x${Math.random().toString(16).substr(2, 40)}`,
+      private_key: `0x${Math.random().toString(16).substr(2, 64)}`,
+      network: network.network,
+      currency: network.currency,
+      mnemonic: null,
+      balance: 0,
+      is_active: true,
+      created_at: new Date().toISOString()
+    }));
+
+    // Insert default wallets
+    const { error: walletError } = await supabaseAdmin
+      .from('wallets')
+      .insert(walletsToCreate);
+
+    if (walletError) {
+      console.error('Failed to create default wallets:', walletError);
+      // Don't fail registration if wallet creation fails, just log it
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email },
