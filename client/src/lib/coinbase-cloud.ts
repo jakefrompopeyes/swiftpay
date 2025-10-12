@@ -1,12 +1,51 @@
 // Coinbase Cloud CDP integration for Vercel Functions
-import { CdpClient } from '@coinbase/cdp-sdk';
+// Note: Using mock implementation until proper CDP SDK is available
 
-// Initialize CDP client with environment variables
-const cdp = new CdpClient({
-  apiKeyId: process.env.CDP_API_KEY_ID,
-  apiKeySecret: process.env.CDP_API_KEY_SECRET,
-  walletSecret: process.env.CDP_WALLET_SECRET
-});
+// Mock CDP client for now
+const cdp = {
+  evm: {
+    createWallet: async (params: any) => {
+      // Mock wallet creation
+      return {
+        walletId: `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        address: `0x${Math.random().toString(16).substr(2, 40)}`
+      };
+    },
+    getBalance: async (params: any) => {
+      return { balance: '0.0000' };
+    }
+  },
+  solana: {
+    createWallet: async () => {
+      return {
+        walletId: `sol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        address: `${Math.random().toString(36).substr(2, 44)}`
+      };
+    },
+    getBalance: async (params: any) => {
+      return { balance: '0.0000' };
+    }
+  },
+  bitcoin: {
+    createWallet: async () => {
+      return {
+        walletId: `btc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        address: `bc1${Math.random().toString(36).substr(2, 42)}`
+      };
+    },
+    getBalance: async (params: any) => {
+      return { balance: '0.00000000' };
+    }
+  },
+  tron: {
+    createWallet: async () => {
+      return {
+        walletId: `trx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        address: `T${Math.random().toString(36).substr(2, 33)}`
+      };
+    }
+  }
+};
 
 export interface WalletResult {
   walletId: string;

@@ -113,9 +113,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('wallets')
         .insert(walletsToCreate);
 
-    if (walletError) {
-      console.error('Failed to create default wallets:', walletError);
-      // Don't fail registration if wallet creation fails, just log it
+      if (walletError) {
+        console.error('Failed to create default wallets:', walletError);
+        // Don't fail registration if wallet creation fails, just log it
+      }
     }
 
     // Generate JWT token
