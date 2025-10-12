@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '../../../lib/supabase-server';
+import { coinbaseCloudService } from '../../../lib/coinbase-cloud';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -73,23 +74,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { network: 'binance', currency: 'BNB' }
     ];
 
-    const walletsToCreate = supportedNetworks.map(network => ({
-      // Let Supabase generate the UUID automatically by not providing an id
-      user_id: user.id,
-      address: `0x${Math.random().toString(16).substr(2, 40)}`,
-      private_key: `0x${Math.random().toString(16).substr(2, 64)}`,
-      network: network.network,
-      currency: network.currency,
-      mnemonic: null,
-      balance: 0,
-      is_active: true,
-      created_at: new Date().toISOString()
-    }));
+    // Create wallets using Coinbase Cloud
+    const walletsToCreate = [];
+    
+    for (const network of supportedNetworks) {
+      try {
+        console.log(`Creating ${network.currency} wallet for new user ${user.id}`);
+        
+        // Create wallet using Coinbase Cloud
+        const walletResult = await coinbaseCloudService.createWallet(network.network);
+        
+        // Prepare wallet data for database
+        const walletData = {
+          // Let Supabase generate the UUID automatically
+          user_id: user.id,
+          address: walletResult.address,
+          private_key: `coinbase_cloud_${walletResult.walletId}`, // Store Coinbase Cloud wallet ID
+          network: walletResult.network,
+          currency: walletResult.currency,
+          mnemonic: null, // Coinbase Cloud handles key management
+          balance: 0, // Will be updated with real balance later
+          is_active: true,
+          created_at: new Date().toISOString()
+        };
+        
+        walletsToCreate.push(walletData);
+        console.log(`✅ Created ${network.currency} wallet: ${walletResult.address}`);
+        
+      } catch (error: any) {
+        console.error(`❌ Failed to create ${network.currency} wallet:`, error);
+        // Continue with other wallets even if one fails
+      }
+    }
 
-    // Insert default wallets
-    const { error: walletError } = await supabaseAdmin
-      .from('wallets')
-      .insert(walletsToCreate);
+    // Insert default wallets if any were created
+    if (walletsToCreate.length > 0) {
+      const { error: walletError } = await supabaseAdmin
+        .from('wallets')
+        .insert(walletsToCreate);
 
     if (walletError) {
       console.error('Failed to create default wallets:', walletError);

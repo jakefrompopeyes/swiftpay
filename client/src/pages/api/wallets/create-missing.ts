@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware';
+import { coinbaseCloudService } from '../../../lib/coinbase-cloud';
 
 export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -51,19 +52,46 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // Create missing wallets
-      const walletsToCreate = missingNetworks.map(network => ({
-        // Let Supabase generate the UUID automatically by not providing an id
-        user_id: req.user!.id,
-        address: `0x${Math.random().toString(16).substr(2, 40)}`,
-        private_key: `0x${Math.random().toString(16).substr(2, 64)}`,
-        network: network.network,
-        currency: network.currency,
-        mnemonic: null,
-        balance: 0,
-        is_active: true,
-        created_at: new Date().toISOString()
-      }));
+      // Create missing wallets using Coinbase Cloud
+      const walletsToCreate = [];
+      
+      for (const network of missingNetworks) {
+        try {
+          console.log(`Creating ${network.currency} wallet for user ${req.user!.id}`);
+          
+          // Create wallet using Coinbase Cloud
+          const walletResult = await coinbaseCloudService.createWallet(network.network);
+          
+          // Prepare wallet data for database
+          const walletData = {
+            // Let Supabase generate the UUID automatically
+            user_id: req.user!.id,
+            address: walletResult.address,
+            private_key: `coinbase_cloud_${walletResult.walletId}`, // Store Coinbase Cloud wallet ID
+            network: walletResult.network,
+            currency: walletResult.currency,
+            mnemonic: null, // Coinbase Cloud handles key management
+            balance: 0, // Will be updated with real balance later
+            is_active: true,
+            created_at: new Date().toISOString()
+          };
+          
+          walletsToCreate.push(walletData);
+          console.log(`✅ Created ${network.currency} wallet: ${walletResult.address}`);
+          
+        } catch (error: any) {
+          console.error(`❌ Failed to create ${network.currency} wallet:`, error);
+          // Continue with other wallets even if one fails
+        }
+      }
+
+      if (walletsToCreate.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No wallets could be created',
+          data: { created: 0, wallets: [] }
+        });
+      }
 
       const { data: createdWallets, error: createError } = await supabaseAdmin
         .from('wallets')
@@ -81,7 +109,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
       res.json({
         success: true,
-        message: `Created ${createdWallets?.length || 0} missing wallets`,
+        message: `Created ${createdWallets?.length || 0} missing wallets using Coinbase Cloud`,
         data: { 
           created: createdWallets?.length || 0,
           wallets: createdWallets 
