@@ -200,7 +200,7 @@ router.get('/networks', asyncHandler(async (req: AuthRequest, res: Response) => 
     
     res.json({
       success: true,
-      data: networks.map(network => ({
+      data: networks.map((network: any) => ({
         network: network.network,
         name: network.name,
         currency: network.currency,

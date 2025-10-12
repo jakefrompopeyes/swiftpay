@@ -10,6 +10,8 @@ interface WalletResult {
 interface TransactionResult {
   txHash: string;
   status: string;
+  success?: boolean;
+  explorerUrl?: string;
 }
 
 class CoinbaseCloudService {
@@ -173,4 +175,4 @@ class CoinbaseCloudService {
 
 // Export singleton instance
 const coinbaseCloudService = new CoinbaseCloudService();
-module.exports = { coinbaseCloudService };
+export { coinbaseCloudService };

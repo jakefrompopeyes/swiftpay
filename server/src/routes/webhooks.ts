@@ -41,10 +41,10 @@ router.post('/chain', async (req: Request, res: Response) => {
 
     broadcast({ type: 'payment_request_updated', id: pr.id, status: 'completed', txHash })
 
-    res.json({ success: true })
+    return res.json({ success: true })
   } catch (e: any) {
     console.error('Webhook error:', e)
-    res.status(500).json({ success: false })
+    return res.status(500).json({ success: false })
   }
 })
 

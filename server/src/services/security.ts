@@ -179,40 +179,9 @@ export class SecurityService {
 
   // Rate limiting middleware
   public rateLimitMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    const clientId = req.ip || 'unknown';
-    const now = Date.now();
-    const windowMs = 60 * 1000; // 1 minute
-
     // This is a simplified rate limiter - in production, use Redis
-    if (!req.session) {
-      req.session = {} as any;
-    }
-
-    if (!req.session.rateLimit) {
-      req.session.rateLimit = {
-        requests: [],
-        lastReset: now
-      };
-    }
-
-    const rateLimit = req.session.rateLimit;
-    
-    // Clean old requests
-    rateLimit.requests = rateLimit.requests.filter(
-      (timestamp: number) => now - timestamp < windowMs
-    );
-
-    // Check if limit exceeded
-    if (rateLimit.requests.length >= this.config.maxRequestsPerMinute) {
-      return res.status(429).json({
-        success: false,
-        error: 'Too many requests, please try again later'
-      });
-    }
-
-    // Add current request
-    rateLimit.requests.push(now);
-    next();
+    // For now, just pass through - we're using express-rate-limit instead
+    return next();
   };
 }
 
