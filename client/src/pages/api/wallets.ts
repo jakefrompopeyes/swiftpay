@@ -8,8 +8,9 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       try {
         const { data: wallets, error } = await supabaseAdmin
           .from('wallets')
-          .select('id, address, network, currency, created_at')
-          .eq('user_id', req.user!.id);
+          .select('id, address, network, currency, balance, is_active, created_at')
+          .eq('user_id', req.user!.id)
+          .eq('is_active', true);
 
         if (error) {
           return res.status(500).json({
@@ -37,22 +38,32 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       try {
         const { network = 'ethereum' } = req.body;
 
-        // For now, create a mock wallet
-        // In production, you'd integrate with Coinbase Cloud or similar
+        // Create a mock wallet with proper schema
+        const currencyMap: { [key: string]: string } = {
+          'ethereum': 'ETH',
+          'bitcoin': 'BTC',
+          'polygon': 'MATIC',
+          'solana': 'SOL',
+          'base': 'ETH'
+        };
+
         const mockWallet = {
           id: `wallet_${Date.now()}`,
           user_id: req.user!.id,
           address: `0x${Math.random().toString(16).substr(2, 40)}`,
           private_key: `0x${Math.random().toString(16).substr(2, 64)}`,
           network,
-          currency: network === 'ethereum' ? 'ETH' : 'BTC',
+          currency: currencyMap[network] || 'ETH',
+          mnemonic: null,
+          balance: 0,
+          is_active: true,
           created_at: new Date().toISOString()
         };
 
         const { data: wallet, error } = await supabaseAdmin
           .from('wallets')
           .insert(mockWallet)
-          .select('id, address, network, currency, created_at')
+          .select('id, address, network, currency, balance, is_active, created_at')
           .single();
 
         if (error) {
