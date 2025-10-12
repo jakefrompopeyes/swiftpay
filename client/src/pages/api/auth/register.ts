@@ -56,9 +56,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single();
 
     if (error || !user) {
+      console.error('Supabase error:', error);
       return res.status(500).json({
         success: false,
-        error: 'Failed to create user'
+        error: 'Failed to create user',
+        details: error?.message || 'Unknown error'
       });
     }
 
