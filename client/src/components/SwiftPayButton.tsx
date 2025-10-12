@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { backendAPI } from '../services/backendAPI'
+import { API_CONFIG } from '../config/api'
 
 interface SwiftPayButtonProps {
   amount?: number
@@ -94,7 +95,7 @@ if (typeof window !== 'undefined') {
   // @ts-ignore
   window.SwiftPay = {
     createCheckoutUrl: (amount?: number, description?: string, merchantId?: string, currency: string = 'ETH') => {
-      const baseUrl = window.location.origin.replace(/:\d+$/, ':3001')
+      const baseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || API_CONFIG.BACKEND.BASE_URL)
       const params = new URLSearchParams()
       if (amount) params.append('amount', String(amount))
       if (description) params.append('description', description)

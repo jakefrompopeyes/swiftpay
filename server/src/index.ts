@@ -62,9 +62,14 @@ app.use(cors({
       'http://localhost:3007',
       'http://localhost:3008',
       'http://localhost:3009',
-      undefined // allow same-origin/non-browser tools
+      undefined, // allow same-origin/non-browser tools
+      // Vercel preview/deployments
+      /https?:\/\/.+\.vercel\.app$/
     ]
-    if (!origin || allowed.includes(origin)) return callback(null, true)
+    if (!origin) return callback(null, true)
+    if (allowed.some((o) => (typeof o === 'string' ? o === origin : (o as RegExp).test(origin)))) {
+      return callback(null, true)
+    }
     callback(null, false)
   },
   credentials: true

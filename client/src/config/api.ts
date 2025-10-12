@@ -2,9 +2,10 @@
 export const API_CONFIG = {
   // SwiftPay Backend API Configuration
   BACKEND: {
-    BASE_URL: process.env.NODE_ENV === 'production' 
-      ? 'https://your-backend-url.com' // Will be updated when we deploy
-      : 'http://localhost:3001',
+    // Prefer explicit env at build-time; fallback to localhost in dev
+    BASE_URL: process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.NODE_ENV === 'production'
+      ? 'https://your-backend-url.com'
+      : 'http://localhost:3001'),
     ENDPOINTS: {
       AUTH: {
         REGISTER: '/api/auth/register',
