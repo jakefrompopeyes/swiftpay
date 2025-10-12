@@ -53,7 +53,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
       // Create missing wallets
       const walletsToCreate = missingNetworks.map(network => ({
-        id: `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        // Let Supabase generate the UUID automatically by not providing an id
         user_id: req.user!.id,
         address: `0x${Math.random().toString(16).substr(2, 40)}`,
         private_key: `0x${Math.random().toString(16).substr(2, 64)}`,

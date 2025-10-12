@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ];
 
     const walletsToCreate = supportedNetworks.map(network => ({
-      id: `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Let Supabase generate the UUID automatically by not providing an id
       user_id: user.id,
       address: `0x${Math.random().toString(16).substr(2, 40)}`,
       private_key: `0x${Math.random().toString(16).substr(2, 64)}`,

@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Test if we can insert a test wallet (then delete it)
     const testWallet = {
-      id: `test_${Date.now()}`,
+      // Let Supabase generate the UUID automatically
       user_id: '00000000-0000-0000-0000-000000000000', // Dummy UUID
       address: '0x1234567890123456789012345678901234567890',
       private_key: '0x1234567890123456789012345678901234567890123456789012345678901234',
@@ -49,11 +49,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Clean up test wallet
+    // Clean up test wallet (delete by address since we don't have the generated id)
     await supabaseAdmin
       .from('wallets')
       .delete()
-      .eq('id', testWallet.id);
+      .eq('address', testWallet.address);
 
     res.json({
       success: true,
