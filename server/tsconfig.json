@@ -6,6 +6,7 @@
     "types": ["node"],
     "outDir": "./dist",
     "rootDir": "./src",
+    "baseUrl": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -30,7 +31,8 @@
       "@/services/*": ["src/services/*"],
       "@/controllers/*": ["src/controllers/*"],
       "@/middleware/*": ["src/middleware/*"]
-    }
+    },
+    "skipLibCheck": true
   },
   "include": ["src/**/*", "../src/**/*"],
   "exclude": ["node_modules", "dist"]
