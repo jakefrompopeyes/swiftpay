@@ -29,9 +29,9 @@ export const API_CONFIG = {
         ANALYTICS: '/api/vendors/analytics'
       },
       PUBLIC: {
-        HEALTH: '/api/public/health',
-        PRICES: '/api/public/prices',
-        CRYPTOCURRENCIES: '/api/public/cryptocurrencies'
+        HEALTH: '/api/health',
+        PRICES: '/api/prices',
+        CRYPTOCURRENCIES: '/api/cryptocurrencies'
       }
     }
   },
