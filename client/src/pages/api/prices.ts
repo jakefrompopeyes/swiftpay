@@ -1,26 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-
-// Simple price service for Vercel Functions
-class PriceService {
-  private prices: Record<string, number> = {
-    BTC: 45000,
-    ETH: 2800,
-    USDC: 1,
-    USDT: 1,
-    BNB: 320,
-    ADA: 0.45,
-    SOL: 95,
-    DOT: 7.2,
-    LINK: 14.5
-  };
-
-  async getPrice(symbol: string): Promise<number> {
-    // In production, you'd fetch from CoinGecko or similar
-    return this.prices[symbol.toUpperCase()] || 0;
-  }
-}
-
-const priceService = new PriceService();
+import { getPrice } from '../../lib/price'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -28,12 +7,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const cryptocurrencies = ['BTC', 'ETH', 'USDC', 'USDT', 'BNB', 'ADA', 'SOL', 'DOT', 'LINK'];
+    const cryptocurrencies = ['BTC', 'ETH', 'USDC', 'USDT', 'BNB', 'ADA', 'SOL', 'DOT', 'LINK', 'MATIC'];
     const prices: Record<string, number> = {};
     
     for (const crypto of cryptocurrencies) {
       try {
-        prices[crypto] = await priceService.getPrice(crypto);
+        prices[crypto] = await getPrice(crypto);
       } catch (error) {
         console.error(`Failed to get price for ${crypto}:`, error);
         prices[crypto] = 0;
