@@ -47,9 +47,6 @@ export default function MerchantTools() {
 
   const generateButtonCode = () => {
     const href = createdLink || generateCheckoutUrl()
-    if (!href) {
-      return `<!-- Create a payment link first using the tool above, then regenerate this code -->`
-    }
     const buttonText = amount ? `Pay $${amount}` : 'Pay with Crypto'
     
     const styles = {
@@ -63,6 +60,17 @@ export default function MerchantTools() {
       small: 'padding: 8px 16px; font-size: 14px;',
       medium: 'padding: 12px 24px; font-size: 16px;',
       large: 'padding: 16px 32px; font-size: 18px;'
+    }
+
+    // If no href yet, render a disabled preview (non-clickable) so users can see styling.
+    if (!href) {
+      return `
+<!-- SwiftPay Payment Button (disabled preview - create a payment link above) -->
+<a href="#" 
+   style="${styles[buttonStyle as keyof typeof styles]} ${sizes[buttonSize as keyof typeof sizes]} text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; transition: all 0.2s; opacity: 0.6; pointer-events: none;" aria-disabled="true" title="Create a payment link above to enable">
+  ${buttonText}
+</a>
+<!-- End SwiftPay Button -->`
     }
 
     return `
@@ -346,6 +354,11 @@ window.location.href = checkoutUrl;`
                   </h3>
                   <button
                     onClick={() => {
+                      // For button, require a created link to copy working code
+                      if (selectedIntegration === 'button' && !createdLink) {
+                        alert('Please click "Generate Payment Request" first to enable the button and copy code.');
+                        return
+                      }
                       const code = selectedIntegration === 'button' ? generateButtonCode() :
                                   selectedIntegration === 'link' ? generateCheckoutUrl() :
                                   selectedIntegration === 'api' ? generateApiExample() :
