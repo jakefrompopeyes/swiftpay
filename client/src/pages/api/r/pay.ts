@@ -79,8 +79,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const baseUrl = `${proto}://${host}`
     const redirectUrl = `${baseUrl}/pay/${data.id}`
 
+    // Return JSON with redirect to allow client-side navigation fallback
     res.setHeader('Location', redirectUrl)
-    res.status(302).end()
+    if ((req.headers.accept || '').includes('application/json')) {
+      res.status(200).json({ success: true, redirectUrl })
+    } else {
+      res.status(302).end()
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Redirect pay error:', err)

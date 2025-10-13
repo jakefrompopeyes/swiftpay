@@ -28,11 +28,25 @@ export default function PayRequest() {
   const [usdAmount, setUsdAmount] = useState<number | null>(null)
   const [currentAmount, setCurrentAmount] = useState<number | null>(null)
 
+  const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 5, delayMs = 300): Promise<any> => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const r = await fetch(url, options)
+        const j = await r.json().catch(() => ({ success: false }))
+        if (j && j.success) return j
+        // If 404/not found, wait and retry to handle read-after-write latency
+        await new Promise(res => setTimeout(res, delayMs * (i + 1)))
+      } catch {
+        await new Promise(res => setTimeout(res, delayMs * (i + 1)))
+      }
+    }
+    return { success: false, error: 'Payment request not found' }
+  }
+
   useEffect(() => {
     if (!id) return
-    fetch(`/api/payment-requests/${id}`)
-      .then(async (r) => {
-        const j = await r.json().catch(() => ({ success: false, error: 'Invalid response' }))
+    fetchWithRetry(`/api/payment-requests/${id}`)
+      .then(async (j) => {
         if (j?.success) {
           setData(j.data)
           const uri = `${j.data.network}:${j.data.to_address}?amount=${j.data.amount}`
@@ -43,9 +57,8 @@ export default function PayRequest() {
       })
 
     // load merchant wallets (accepted currencies)
-    fetch(`/api/payment-requests/${id}/options`)
-      .then(async (r) => {
-        const j = await r.json().catch(() => ({ success: false }))
+    fetchWithRetry(`/api/payment-requests/${id}/options`)
+      .then((j) => {
         if (j.success) {
           setOptions(j.data)
           if (j.data.wallets && j.data.wallets.length > 0) {
