@@ -43,7 +43,14 @@ export default function PayRequest() {
     const isSol = (network || '').toLowerCase() === 'solana'
     const scheme = isSol ? 'solana' : 'ethereum'
     const chainId = isSol ? null : getEvmChainId(network)
-    const amountParam = `amount=${amount}`
+    // EVM wallets generally expect EIP-681 (value in wei), while Solana wallets accept amount in SOL
+    const toWei = (amt: number): string => {
+      // Convert decimal to 18-decimal integer string without floating errors
+      const s = (amt || 0).toFixed(18) // 18 decimals
+      const [ints, decs] = s.split('.')
+      return `${ints}${decs}`.replace(/^0+/, '') || '0'
+    }
+    const amountParam = isSol ? `amount=${amount}` : `value=${toWei(amount)}`
     const atChain = chainId ? `@${chainId}` : ''
     return `${scheme}:${address}${atChain}?${amountParam}`
   }
