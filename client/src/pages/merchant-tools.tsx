@@ -41,9 +41,10 @@ export default function MerchantTools() {
   }, [])
 
   const generateCheckoutUrl = () => {
-    // Build redirector URL that will create-and-send to /pay
+    // Require merchantId to build a working link
+    if (!merchantId) return ''
     const params = new URLSearchParams()
-    if (merchantId) params.set('merchantId', merchantId)
+    params.set('merchantId', merchantId)
     if (amount) params.set('amount', amount)
     if (currency) params.set('currency', currency)
     if (description) params.set('description', description)
@@ -66,6 +67,17 @@ export default function MerchantTools() {
       small: 'padding: 8px 16px; font-size: 14px;',
       medium: 'padding: 12px 24px; font-size: 16px;',
       large: 'padding: 16px 32px; font-size: 18px;'
+    }
+
+    // If no href (missing merchantId), render disabled preview
+    if (!href) {
+      return `
+<!-- SwiftPay Payment Button (disabled - set Merchant ID) -->
+<a href="#" 
+   style="${styles[buttonStyle as keyof typeof styles]} ${sizes[buttonSize as keyof typeof sizes]} text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; transition: all 0.2s; opacity: 0.6; pointer-events: none;" aria-disabled="true" title="Login or enter Merchant ID to enable">
+  ${buttonText}
+</a>
+<!-- End SwiftPay Button -->`
     }
 
     return `
@@ -388,42 +400,7 @@ window.location.href = checkoutUrl;`
                   </div>
                 )}
 
-                {selectedIntegration === 'button' && (
-                  <div className="mb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Currency
-                        </label>
-                        <select
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
-                          className="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="ETH">ETH (Ethereum)</option>
-                          <option value="SOL">SOL (Solana)</option>
-                          <option value="BNB">BNB (BNB Chain)</option>
-                          <option value="MATIC">MATIC (Polygon)</option>
-                        </select>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {createdLink && (
-                          <Link href={createdLink} target="_blank" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                            Open Link
-                          </Link>
-                        )}
-                        <button
-                          onClick={createPaymentRequest}
-                          disabled={creating}
-                          className={`inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${creating ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                        >
-                          {creating ? 'Generating…' : 'Generate Payment Request'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Removed Generate Payment Request block: button now links directly to /api/r/pay */}
 
                 {selectedIntegration === 'link' && (
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg">
