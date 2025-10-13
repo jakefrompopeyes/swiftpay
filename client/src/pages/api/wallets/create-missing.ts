@@ -3,6 +3,8 @@ import { supabaseAdmin } from '../../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware';
 import { coinbaseCloudService } from '../../../lib/coinbase-cloud';
 
+interface ExistingWallet { network: string; currency: string }
+
 export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -11,7 +13,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
   return authenticateToken(req, res, async () => {
     try {
       // Define supported networks and their currencies
-      const supportedNetworks = [
+      const supportedNetworks: Array<{ network: string; currency: string }> = [
         { network: 'ethereum', currency: 'ETH' },
         { network: 'polygon', currency: 'MATIC' },
         { network: 'base', currency: 'ETH' },
@@ -38,13 +40,13 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
       // Find missing networks (only for networks that produce real CDP wallets)
       const existingCurrencies = new Set(
-        (existingWallets || [])
-          .filter(w => ['ETH', 'SOL', 'BNB', 'MATIC'].includes(w.currency))
-          .map(w => w.currency)
+        ((existingWallets || []) as ExistingWallet[])
+          .filter((w: ExistingWallet) => ['ETH', 'SOL', 'BNB', 'MATIC'].includes(w.currency))
+          .map((w: ExistingWallet) => w.currency)
       );
       
       const missingNetworks = supportedNetworks.filter(
-        net => !existingCurrencies.has(net.currency)
+        (net: { network: string; currency: string }) => !existingCurrencies.has(net.currency)
       );
 
       if (missingNetworks.length === 0) {
@@ -56,7 +58,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       // Create missing wallets using Coinbase Cloud
-      const walletsToCreate = [];
+      const walletsToCreate: Array<{ [k: string]: any }> = [];
       
       for (const network of missingNetworks) {
         try {
