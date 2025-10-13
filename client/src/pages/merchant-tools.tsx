@@ -26,6 +26,7 @@ export default function MerchantTools() {
   const [createdLink, setCreatedLink] = useState<string>('')
   const [creating, setCreating] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [selectedLang, setSelectedLang] = useState<'html' | 'react' | 'javascript' | 'curl' | 'python' | 'url'>('html')
 
   useEffect(() => {
     setMounted(true)
@@ -39,6 +40,14 @@ export default function MerchantTools() {
       }
     } catch {}
   }, [])
+
+  useEffect(() => {
+    // Reset language per integration for sensible defaults
+    if (selectedIntegration === 'button') setSelectedLang('html')
+    if (selectedIntegration === 'api') setSelectedLang('javascript')
+    if (selectedIntegration === 'embed') setSelectedLang('html')
+    if (selectedIntegration === 'link') setSelectedLang('url')
+  }, [selectedIntegration])
 
   const getPublicBaseUrl = () => {
     const envUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || '').trim()
@@ -103,6 +112,26 @@ export default function MerchantTools() {
 <!-- End SwiftPay Button -->`
   }
 
+  const generateButtonReactCode = () => {
+    const href = generateCheckoutUrl()
+    const buttonText = amount ? `Pay $${amount}` : 'Pay with Crypto'
+    return `
+// SwiftPay Pay Button (React)
+import React from 'react'
+
+export default function PayButton() {
+  const handleClick = () => {
+    window.location.href = '${href}'
+  }
+  return (
+    <button onClick={handleClick} style={{ background: '#4f46e5', color: '#ffffff', padding: '12px 24px', borderRadius: 6, fontWeight: 500 }}>
+      ${buttonText}
+    </button>
+  )
+}
+`
+  }
+
   const createPaymentRequest = async () => {
     if (!amount || !currency) return
     setCreating(true)
@@ -131,38 +160,47 @@ export default function MerchantTools() {
 <!-- End SwiftPay Embed -->`
   }
 
-  const generateApiExample = () => {
-    return `
-// SwiftPay API Integration Example
-const swiftpay = {
-  createPayment: async (amount, description, merchant) => {
-    const response = await fetch('https://api.swiftpay.com/v1/payments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_API_KEY'
-      },
-      body: JSON.stringify({
-        amount: amount,
-        description: description,
-        merchant: merchant,
-        currency: 'USD'
-      })
-    });
-    
-    const payment = await response.json();
-    return payment.checkout_url;
-  }
-};
+  const generateApiExample = (lang: 'javascript' | 'curl' | 'python' | 'url' = 'javascript') => {
+    const checkout = generateCheckoutUrl()
+    if (lang === 'curl') {
+      return `
+# Open SwiftPay Checkout (cURL)
+curl -L '${checkout}'
+`
+    }
+    if (lang === 'python') {
+      return `
+# Open SwiftPay Checkout (Python)
+import webbrowser
 
-// Usage
-const checkoutUrl = await swiftpay.createPayment(50, 'Coffee Order', 'Joe\'s Cafe');
-window.location.href = checkoutUrl;`
+webbrowser.open('${checkout}')
+`
+    }
+    if (lang === 'url') {
+      return checkout
+    }
+    // Default: JavaScript
+    return `
+// Open SwiftPay Checkout (JavaScript)
+window.location.href = '${checkout}'
+`
   }
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const el = document.createElement('textarea')
+        el.value = text
+        el.style.position = 'fixed'
+        el.style.left = '-9999px'
+        document.body.appendChild(el)
+        el.focus()
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+      }
       setIsCopied(true)
       setTimeout(() => setIsCopied(false), 2000)
     } catch (err) {
@@ -373,17 +411,34 @@ window.location.href = checkoutUrl;`
                     {selectedIntegration === 'api' && 'API Integration Code'}
                     {selectedIntegration === 'embed' && 'Embed Code'}
                   </h3>
+                  {/* Language Tabs */}
+                  <div className="flex items-center space-x-2">
+                    {selectedIntegration === 'button' && (
+                      <>
+                        <button onClick={() => setSelectedLang('html')} className={`text-xs px-2 py-1 rounded ${selectedLang === 'html' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>HTML</button>
+                        <button onClick={() => setSelectedLang('react')} className={`text-xs px-2 py-1 rounded ${selectedLang === 'react' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>React</button>
+                      </>
+                    )}
+                    {selectedIntegration === 'api' && (
+                      <>
+                        <button onClick={() => setSelectedLang('javascript')} className={`text-xs px-2 py-1 rounded ${selectedLang === 'javascript' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>JavaScript</button>
+                        <button onClick={() => setSelectedLang('curl')} className={`text-xs px-2 py-1 rounded ${selectedLang === 'curl' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>cURL</button>
+                        <button onClick={() => setSelectedLang('python')} className={`text-xs px-2 py-1 rounded ${selectedLang === 'python' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Python</button>
+                      </>
+                    )}
+                  </div>
                   <button
                     onClick={() => {
-                      // For button, require a created link to copy working code
-                      if (selectedIntegration === 'button' && !createdLink) {
-                        alert('Please click "Generate Payment Request" first to enable the button and copy code.');
-                        return
+                      let code = ''
+                      if (selectedIntegration === 'button') {
+                        code = selectedLang === 'react' ? generateButtonReactCode() : generateButtonCode()
+                      } else if (selectedIntegration === 'link') {
+                        code = generateCheckoutUrl()
+                      } else if (selectedIntegration === 'api') {
+                        code = generateApiExample(selectedLang as any)
+                      } else {
+                        code = generateEmbedCode()
                       }
-                      const code = selectedIntegration === 'button' ? generateButtonCode() :
-                                  selectedIntegration === 'link' ? generateCheckoutUrl() :
-                                  selectedIntegration === 'api' ? generateApiExample() :
-                                  generateEmbedCode()
                       copyToClipboard(code)
                     }}
                     className="text-indigo-600 hover:text-indigo-500 text-sm font-medium flex items-center"
@@ -431,9 +486,9 @@ window.location.href = checkoutUrl;`
                 <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
                   <pre className="text-sm">
                     <code>
-                      {mounted && selectedIntegration === 'button' && generateButtonCode()}
+                      {mounted && selectedIntegration === 'button' && (selectedLang === 'react' ? generateButtonReactCode() : generateButtonCode())}
                       {mounted && selectedIntegration === 'link' && generateCheckoutUrl()}
-                      {selectedIntegration === 'api' && generateApiExample()}
+                      {selectedIntegration === 'api' && generateApiExample(selectedLang as any)}
                       {mounted && selectedIntegration === 'embed' && generateEmbedCode()}
                     </code>
                   </pre>
