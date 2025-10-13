@@ -40,6 +40,18 @@ export default function MerchantTools() {
     } catch {}
   }, [])
 
+  const getPublicBaseUrl = () => {
+    const envUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || '').trim()
+    if (envUrl) {
+      const withProtocol = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`
+      return withProtocol.replace(/\/$/, '')
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin
+    }
+    return ''
+  }
+
   const generateCheckoutUrl = () => {
     // Require merchantId to build a working link
     if (!merchantId) return ''
@@ -49,7 +61,9 @@ export default function MerchantTools() {
     if (currency) params.set('currency', currency)
     if (description) params.set('description', description)
     const qs = params.toString()
-    return `/api/r/pay${qs ? `?${qs}` : ''}`
+    const base = getPublicBaseUrl()
+    const path = `/api/r/pay${qs ? `?${qs}` : ''}`
+    return `${base}${path}`
   }
 
   const generateButtonCode = () => {
