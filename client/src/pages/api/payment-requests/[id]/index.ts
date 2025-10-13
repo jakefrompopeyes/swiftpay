@@ -18,6 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ success: false, error: 'Supabase not configured' })
       return
     }
+    // Bust any intermediate caches and ensure fresh read
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
       .select('id, user_id, amount, currency, network, description, status, to_address, created_at, updated_at')

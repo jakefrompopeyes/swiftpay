@@ -18,6 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ success: false, error: 'Supabase not configured' })
       return
     }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     // Fetch request to get merchant id
     const { data: pr, error: prErr } = await supabaseAdmin
       .from('payment_requests')

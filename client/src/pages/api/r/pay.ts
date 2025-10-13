@@ -12,6 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ success: false, error: 'Supabase not configured' })
       return
     }
+    // Prevent CDN/proxy caching of this dynamic redirect endpoint
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
     const { merchantId, amount, currency, description } = req.query
 
     if (!merchantId || typeof merchantId !== 'string') {

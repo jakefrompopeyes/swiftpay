@@ -18,6 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ success: false, error: 'Supabase not configured' })
       return
     }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
       .select('status')

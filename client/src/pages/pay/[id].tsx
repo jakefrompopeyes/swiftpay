@@ -28,10 +28,11 @@ export default function PayRequest() {
   const [usdAmount, setUsdAmount] = useState<number | null>(null)
   const [currentAmount, setCurrentAmount] = useState<number | null>(null)
 
-  const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 5, delayMs = 300): Promise<any> => {
+  const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 12, delayMs = 400): Promise<any> => {
     for (let i = 0; i < attempts; i++) {
       try {
-        const r = await fetch(url, options)
+        const cacheBust = url.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`
+        const r = await fetch(`${url}${cacheBust}`, { ...options, cache: 'no-store' })
         const j = await r.json().catch(() => ({ success: false }))
         if (j && j.success) return j
         // If 404/not found, wait and retry to handle read-after-write latency
