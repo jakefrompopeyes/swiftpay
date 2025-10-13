@@ -24,13 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const safeDescription = description ? String(description) : ''
 
     const paymentRequest = {
-      id: `pr_${Date.now()}`,
+      // Let Supabase generate UUID id
       user_id: merchantId,
       amount: parsedAmount,
       currency,
       description: safeDescription,
-      status: 'pending',
-      created_at: new Date().toISOString()
+      status: 'pending'
     }
 
     const { data, error } = await supabaseAdmin
@@ -42,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) {
       // eslint-disable-next-line no-console
       console.error('Redirect pay insert error:', error)
-      res.status(500).json({ success: false, error: 'Failed to create payment request' })
+      res.status(500).json({ success: false, error: 'Failed to create payment request', details: (error as any)?.message || String(error) })
       return
     }
 
