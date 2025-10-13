@@ -22,14 +22,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const parsedAmount = amount ? parseFloat(String(amount)) : 0
     const safeDescription = description ? String(description) : ''
+    const upperCurrency = String(currency).toUpperCase()
+
+    // Find merchant wallet for requested currency
+    const { data: wallet, error: walletErr } = await supabaseAdmin
+      .from('wallets')
+      .select('address, network, currency')
+      .eq('user_id', merchantId)
+      .eq('currency', upperCurrency)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+
+    if (walletErr) {
+      // eslint-disable-next-line no-console
+      console.error('Redirect pay wallet lookup error:', walletErr)
+      res.status(500).json({ success: false, error: 'Failed to find wallet', details: (walletErr as any)?.message || String(walletErr) })
+      return
+    }
+
+    if (!wallet || !wallet.address) {
+      res.status(400).json({ success: false, error: 'Wallet for requested currency not found' })
+      return
+    }
 
     const paymentRequest = {
       // Let Supabase generate UUID id
       user_id: merchantId,
       amount: parsedAmount,
-      currency,
+      currency: upperCurrency,
+      network: wallet.network,
       description: safeDescription,
-      status: 'pending'
+      status: 'pending',
+      to_address: wallet.address
     }
 
     const { data, error } = await supabaseAdmin
