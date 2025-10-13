@@ -18,6 +18,7 @@ export default function PayRequest() {
   const router = useRouter()
   const { id } = router.query
   const [data, setData] = useState<any>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [options, setOptions] = useState<{ wallets: any[] } | null>(null)
   const [qr, setQr] = useState<string>('')
   const [status, setStatus] = useState<string>('pending')
@@ -30,24 +31,25 @@ export default function PayRequest() {
   useEffect(() => {
     if (!id) return
     fetch(`/api/payment-requests/${id}`)
-      .then(r => r.json())
-      .then(async (res) => {
-        if (res.success) {
-          setData(res.data)
-          const uri = `${res.data.network}:${res.data.to_address}?amount=${res.data.amount}`
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({ success: false, error: 'Invalid response' }))
+        if (j?.success) {
+          setData(j.data)
+          const uri = `${j.data.network}:${j.data.to_address}?amount=${j.data.amount}`
           setQr(await QRCode.toDataURL(uri))
+        } else {
+          setLoadError(j?.error || 'Payment request not found')
         }
       })
 
     // load merchant wallets (accepted currencies)
     fetch(`/api/payment-requests/${id}/options`)
-      .then(r => r.json())
-      .then((res) => { 
-        if (res.success) {
-          setOptions(res.data)
-          // Set the first wallet as selected by default
-          if (res.data.wallets && res.data.wallets.length > 0) {
-            setSelectedWallet(res.data.wallets[0])
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({ success: false }))
+        if (j.success) {
+          setOptions(j.data)
+          if (j.data.wallets && j.data.wallets.length > 0) {
+            setSelectedWallet(j.data.wallets[0])
           }
         }
       })
@@ -156,7 +158,19 @@ export default function PayRequest() {
       
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {data ? (
+          {loadError ? (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <p className="text-red-600 font-medium mb-2">{loadError}</p>
+                <button
+                  onClick={() => router.reload()}
+                  className="mt-2 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : data ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Panel: Cryptocurrency Selection */}
               <div className="space-y-6">
