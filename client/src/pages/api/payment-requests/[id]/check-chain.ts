@@ -15,6 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (!supabaseAdmin) {
+      res.status(500).json({ success: false, error: 'Supabase not configured' })
+      return
+    }
     // No-op for now
     res.json({ success: true })
   } catch (err) {

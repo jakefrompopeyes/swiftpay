@@ -14,6 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (!supabaseAdmin) {
+      res.status(500).json({ success: false, error: 'Supabase not configured' })
+      return
+    }
     // Fetch request to get merchant id
     const { data: pr, error: prErr } = await supabaseAdmin
       .from('payment_requests')

@@ -14,6 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (!supabaseAdmin) {
+      res.status(500).json({ success: false, error: 'Supabase not configured' })
+      return
+    }
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
       .select('status')
