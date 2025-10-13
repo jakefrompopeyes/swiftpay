@@ -11,7 +11,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         // Criteria:
         // - Created by our CDP integration (private_key starts with "coinbase_cloud_")
         // - Network is one of the supported networks that map to CDP (ethereum, solana, binance)
-        const allowedNetworks = ['ethereum', 'solana', 'binance'];
+        const allowedNetworks = ['ethereum', 'solana', 'binance', 'polygon', 'base', 'arbitrum'];
 
         const { data: wallets, error } = await supabaseAdmin
           .from('wallets')

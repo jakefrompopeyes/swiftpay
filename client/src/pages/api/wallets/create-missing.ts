@@ -12,10 +12,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
     try {
       // Define supported networks and their currencies
       const supportedNetworks = [
-        { network: 'bitcoin', currency: 'BTC' },
         { network: 'ethereum', currency: 'ETH' },
+        { network: 'polygon', currency: 'MATIC' },
+        { network: 'base', currency: 'ETH' },
+        { network: 'arbitrum', currency: 'ETH' },
         { network: 'solana', currency: 'SOL' },
-        { network: 'tron', currency: 'TRX' },
         { network: 'binance', currency: 'BNB' }
       ];
 
@@ -38,7 +39,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       // Find missing networks (only for networks that produce real CDP wallets)
       const existingCurrencies = new Set(
         (existingWallets || [])
-          .filter(w => ['ETH', 'SOL', 'BNB'].includes(w.currency))
+          .filter(w => ['ETH', 'SOL', 'BNB', 'MATIC'].includes(w.currency))
           .map(w => w.currency)
       );
       

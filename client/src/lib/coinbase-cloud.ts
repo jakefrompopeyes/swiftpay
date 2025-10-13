@@ -41,6 +41,12 @@ class CoinbaseCloudService {
           return await this.createTronWallet();
         case 'binance':
           return await this.createBSCWallet();
+        case 'polygon':
+          return await this.createEVMWallet('polygon');
+        case 'base':
+          return await this.createEVMWallet('base');
+        case 'arbitrum':
+          return await this.createEVMWallet('arbitrum');
         default:
           return await this.createEVMWallet(network);
       }

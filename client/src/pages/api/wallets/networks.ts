@@ -29,6 +29,33 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           testnet: false
         },
         {
+          network: 'polygon',
+          name: 'Polygon',
+          currency: 'MATIC',
+          type: 'EVM',
+          icon: '🟣',
+          description: 'Polygon Mainnet',
+          testnet: false
+        },
+        {
+          network: 'base',
+          name: 'Base',
+          currency: 'ETH',
+          type: 'EVM',
+          icon: '🔵',
+          description: 'Base Mainnet',
+          testnet: false
+        },
+        {
+          network: 'arbitrum',
+          name: 'Arbitrum',
+          currency: 'ETH',
+          type: 'EVM',
+          icon: '🔵',
+          description: 'Arbitrum One',
+          testnet: false
+        },
+        {
           network: 'solana',
           name: 'Solana',
           currency: 'SOL',
