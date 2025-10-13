@@ -28,6 +28,26 @@ export default function PayRequest() {
   const [usdAmount, setUsdAmount] = useState<number | null>(null)
   const [currentAmount, setCurrentAmount] = useState<number | null>(null)
 
+  const getEvmChainId = (network: string | undefined | null): number | null => {
+    switch ((network || '').toLowerCase()) {
+      case 'ethereum': return 1
+      case 'binance': return 56
+      case 'polygon': return 137
+      case 'base': return 8453
+      case 'arbitrum': return 42161
+      default: return null
+    }
+  }
+
+  const buildPaymentUri = (network: string, address: string, amount: number, currency: string) => {
+    const isSol = (network || '').toLowerCase() === 'solana'
+    const scheme = isSol ? 'solana' : 'ethereum'
+    const chainId = isSol ? null : getEvmChainId(network)
+    const amountParam = `amount=${amount}`
+    const atChain = chainId ? `@${chainId}` : ''
+    return `${scheme}:${address}${atChain}?${amountParam}`
+  }
+
   const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 12, delayMs = 400): Promise<any> => {
     for (let i = 0; i < attempts; i++) {
       try {
@@ -50,7 +70,7 @@ export default function PayRequest() {
       .then(async (j) => {
         if (j?.success) {
           setData(j.data)
-          const uri = `${j.data.network}:${j.data.to_address}?amount=${j.data.amount}`
+          const uri = buildPaymentUri(j.data.network, j.data.to_address, j.data.amount, j.data.currency)
           setQr(await QRCode.toDataURL(uri))
         } else {
           setLoadError(j?.error || 'Payment request not found')
@@ -120,7 +140,7 @@ export default function PayRequest() {
     const price = prices[wallet.currency?.toUpperCase?.()] || 0
     const amountToPay = usdAmount && price > 0 ? usdAmount / price : data.amount
     setCurrentAmount(amountToPay)
-    const uri = `${wallet.network}:${wallet.address}?amount=${amountToPay}`
+    const uri = buildPaymentUri(wallet.network, wallet.address, amountToPay, wallet.currency)
     setQr(await QRCode.toDataURL(uri))
   }
 
