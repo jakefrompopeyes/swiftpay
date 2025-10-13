@@ -22,16 +22,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
-      .select('id, user_id, amount, currency, network, description, status, to_address, created_at, updated_at')
+      .select('id, user_id, amount, currency, network, description, status, to_address')
       .eq('id', id)
       .single()
 
-    if (error || !data) {
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Payment request fetch error:', error)
+      res.status(500).json({ success: false, error: 'Failed to load payment request' })
+      return
+    }
+
+    if (!data) {
       res.status(404).json({ success: false, error: 'Payment request not found' })
       return
     }
 
-    res.json({ success: true, data })
+    // Normalize currencies/networks to expected shapes
+    const normalized = {
+      ...data,
+      currency: (data.currency || '').toUpperCase(),
+      network: data.network,
+      to_address: data.to_address
+    }
+    res.json({ success: true, data: normalized })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Get payment request error:', err)
