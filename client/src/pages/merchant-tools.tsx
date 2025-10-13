@@ -41,18 +41,15 @@ export default function MerchantTools() {
   }, [])
 
   const generateCheckoutUrl = () => {
-    const origin = mounted && typeof window !== 'undefined' ? window.location.origin : ''
-    const backendOrigin = origin.replace(/:\d+$/, ':3001')
-    const params = new URLSearchParams()
-    if (amount) params.append('amount', amount)
-    if (description) params.append('description', description)
-    if (merchantId) params.append('mid', merchantId)
-    if (currency) params.append('currency', currency)
-    return `${backendOrigin}/r/pay?${params.toString()}`
+    // On Vercel we must use a server-created link; fall back to empty string
+    return createdLink || ''
   }
 
   const generateButtonCode = () => {
     const href = createdLink || generateCheckoutUrl()
+    if (!href) {
+      return `<!-- Create a payment link first using the tool above, then regenerate this code -->`
+    }
     const buttonText = amount ? `Pay $${amount}` : 'Pay with Crypto'
     
     const styles = {
@@ -96,6 +93,9 @@ export default function MerchantTools() {
 
   const generateEmbedCode = () => {
     const url = generateCheckoutUrl()
+    if (!url) {
+      return `<!-- Create a payment link first using the tool above, then regenerate the embed code -->`
+    }
     return `
 <!-- SwiftPay Embedded QR Checkout -->
 <iframe src="${url}" width="100%" height="600" frameborder="0" style="border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
