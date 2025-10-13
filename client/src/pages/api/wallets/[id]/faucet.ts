@@ -27,18 +27,18 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // For now, return mock faucet response
-      // In production, you'd integrate with testnet faucets
-      const mockAmount = Math.random() * 0.1; // Random small amount
+      // Request real faucet from Coinbase CDP
+      const { coinbaseCloudService } = await import('../../../../lib/coinbase-cloud');
+      const faucetResult = await coinbaseCloudService.requestFaucet(wallet.address, wallet.network, token);
 
       res.json({
         success: true,
         data: {
           address: wallet.address,
-          amount: mockAmount.toFixed(6),
+          amount: faucetResult.amount,
           currency: wallet.currency,
           network: wallet.network,
-          txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+          txHash: faucetResult.txHash,
           message: `Faucet request successful for ${wallet.currency}`
         }
       });

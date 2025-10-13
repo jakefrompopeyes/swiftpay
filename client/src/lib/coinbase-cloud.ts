@@ -117,17 +117,9 @@ class CoinbaseCloudService {
         throw new Error('CDP API credentials not found');
       }
 
-      // Bitcoin is not yet supported by CDP SDK, so we'll create a mock address
-      // In production, you would integrate with a Bitcoin wallet service
-      const mockAddress = `bc1q${Math.random().toString(36).substring(2, 42)}`;
-      
-      return {
-        walletId: mockAddress,
-        address: mockAddress,
-        network: 'bitcoin',
-        currency: 'BTC',
-        balance: '0.00000000'
-      };
+      // Bitcoin is not yet supported by CDP SDK
+      // Skip Bitcoin wallet creation for now
+      throw new Error('Bitcoin wallets are not yet supported by Coinbase CDP SDK');
     } catch (error: any) {
       console.error('Failed to create Bitcoin wallet:', error);
       throw new Error(`Failed to create Bitcoin wallet: ${error.message}`);
@@ -143,17 +135,9 @@ class CoinbaseCloudService {
         throw new Error('CDP API credentials not found');
       }
 
-      // TRON is not yet supported by CDP SDK, so we'll create a mock address
-      // In production, you would integrate with a TRON wallet service
-      const mockAddress = `T${Math.random().toString(36).substring(2, 34)}`;
-      
-      return {
-        walletId: mockAddress,
-        address: mockAddress,
-        network: 'tron',
-        currency: 'TRX',
-        balance: '0.0000'
-      };
+      // TRON is not yet supported by CDP SDK
+      // Skip TRON wallet creation for now
+      throw new Error('TRON wallets are not yet supported by Coinbase CDP SDK');
     } catch (error: any) {
       console.error('Failed to create TRON wallet:', error);
       throw new Error(`Failed to create TRON wallet: ${error.message}`);
@@ -195,16 +179,32 @@ class CoinbaseCloudService {
       // For now, return 0 balance as wallets start empty
       // In production, you would fetch real balance from the blockchain
       const balanceMap: { [key: string]: string } = {
-        'bitcoin': '0.00000000',
         'ethereum': '0.0000',
         'solana': '0.0000',
-        'tron': '0.0000',
         'binance': '0.0000'
       };
       return balanceMap[network] || '0.0000';
     } catch (error: any) {
       console.error(`Failed to get balance for ${address} on ${network}:`, error);
       return '0.0000';
+    }
+  }
+
+  /**
+   * Request faucet funds for testing
+   */
+  async requestFaucet(address: string, network: string, token: string = 'eth'): Promise<any> {
+    try {
+      // For now, return a mock faucet response
+      // In production, you would integrate with testnet faucets
+      return {
+        amount: '0.1',
+        txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        message: `Faucet request successful for ${token}`
+      };
+    } catch (error: any) {
+      console.error('Failed to request faucet:', error);
+      throw new Error(`Failed to request faucet: ${error.message}`);
     }
   }
 
@@ -246,10 +246,8 @@ class CoinbaseCloudService {
    */
   getSupportedNetworks(): Array<{network: string, name: string, currency: string}> {
     return [
-      { network: 'bitcoin', name: 'Bitcoin', currency: 'BTC' },
       { network: 'ethereum', name: 'Ethereum', currency: 'ETH' },
       { network: 'solana', name: 'Solana', currency: 'SOL' },
-      { network: 'tron', name: 'TRON', currency: 'TRX' },
       { network: 'binance', name: 'BNB Smart Chain', currency: 'BNB' }
     ];
   }

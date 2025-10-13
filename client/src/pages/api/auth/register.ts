@@ -65,12 +65,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Create default wallets for the new user
+    // Create default wallets for the new user (only supported networks)
     const supportedNetworks = [
-      { network: 'bitcoin', currency: 'BTC' },
       { network: 'ethereum', currency: 'ETH' },
       { network: 'solana', currency: 'SOL' },
-      { network: 'tron', currency: 'TRX' },
       { network: 'binance', currency: 'BNB' }
     ];
 

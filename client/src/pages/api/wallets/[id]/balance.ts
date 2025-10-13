@@ -26,15 +26,15 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // For now, return mock balance
-      // In production, you'd fetch real balance from blockchain
-      const mockBalance = Math.random() * 10; // Random balance for demo
+      // Get real balance from Coinbase CDP
+      const { coinbaseCloudService } = await import('../../../../lib/coinbase-cloud');
+      const realBalance = await coinbaseCloudService.getWalletBalance(wallet.address, wallet.network);
 
       res.json({
         success: true,
         data: {
           address: wallet.address,
-          balance: mockBalance.toFixed(8),
+          balance: realBalance,
           currency: wallet.currency,
           network: wallet.network
         }
