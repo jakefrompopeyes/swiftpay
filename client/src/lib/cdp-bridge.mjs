@@ -3,11 +3,24 @@
 
 import { CdpClient } from '@coinbase/cdp-sdk';
 
-const cdp = new CdpClient();
+// Initialize CDP client with environment variables
+const apiKey = process.env.CDP_API_KEY_ID;
+const apiSecret = process.env.CDP_API_KEY_SECRET;
+
+const cdp = new CdpClient({
+  apiKey: apiKey,
+  apiSecret: apiSecret,
+});
 
 export async function createEVMWallet(network = 'ethereum') {
   try {
+    console.log(`Creating EVM wallet for network: ${network}`);
+    console.log(`CDP API Key: ${apiKey ? 'Present' : 'Missing'}`);
+    console.log(`CDP API Secret: ${apiSecret ? 'Present' : 'Missing'}`);
+    
     const account = await cdp.evm.createAccount();
+    console.log(`✅ Created EVM wallet: ${account.address}`);
+    
     return {
       walletId: account.address,
       address: account.address,
@@ -17,13 +30,20 @@ export async function createEVMWallet(network = 'ethereum') {
       createdAt: new Date().toISOString()
     };
   } catch (error) {
+    console.error(`❌ Failed to create EVM wallet for ${network}:`, error);
     throw new Error(`Failed to create EVM wallet: ${error.message}`);
   }
 }
 
 export async function createSolanaWallet() {
   try {
+    console.log('Creating Solana wallet');
+    console.log(`CDP API Key: ${apiKey ? 'Present' : 'Missing'}`);
+    console.log(`CDP API Secret: ${apiSecret ? 'Present' : 'Missing'}`);
+    
     const account = await cdp.solana.createAccount();
+    console.log(`✅ Created Solana wallet: ${account.address}`);
+    
     return {
       walletId: account.address,
       address: account.address,
@@ -33,6 +53,7 @@ export async function createSolanaWallet() {
       createdAt: new Date().toISOString()
     };
   } catch (error) {
+    console.error('❌ Failed to create Solana wallet:', error);
     throw new Error(`Failed to create Solana wallet: ${error.message}`);
   }
 }
@@ -75,7 +96,13 @@ export async function createTronWallet() {
 
 export async function createBSCWallet() {
   try {
+    console.log('Creating BSC wallet');
+    console.log(`CDP API Key: ${apiKey ? 'Present' : 'Missing'}`);
+    console.log(`CDP API Secret: ${apiSecret ? 'Present' : 'Missing'}`);
+    
     const account = await cdp.evm.createAccount();
+    console.log(`✅ Created BSC wallet: ${account.address}`);
+    
     return {
       walletId: account.address,
       address: account.address,
@@ -85,6 +112,7 @@ export async function createBSCWallet() {
       createdAt: new Date().toISOString()
     };
   } catch (error) {
+    console.error('❌ Failed to create BSC wallet:', error);
     throw new Error(`Failed to create BSC wallet: ${error.message}`);
   }
 }
