@@ -41,12 +41,18 @@ export default function MerchantTools() {
   }, [])
 
   const generateCheckoutUrl = () => {
-    // On Vercel we must use a server-created link; fall back to empty string
-    return createdLink || ''
+    // Build redirector URL that will create-and-send to /pay
+    const params = new URLSearchParams()
+    if (merchantId) params.set('merchantId', merchantId)
+    if (amount) params.set('amount', amount)
+    if (currency) params.set('currency', currency)
+    if (description) params.set('description', description)
+    const qs = params.toString()
+    return `/api/r/pay${qs ? `?${qs}` : ''}`
   }
 
   const generateButtonCode = () => {
-    const href = createdLink || generateCheckoutUrl()
+    const href = generateCheckoutUrl()
     const buttonText = amount ? `Pay $${amount}` : 'Pay with Crypto'
     
     const styles = {
@@ -60,17 +66,6 @@ export default function MerchantTools() {
       small: 'padding: 8px 16px; font-size: 14px;',
       medium: 'padding: 12px 24px; font-size: 16px;',
       large: 'padding: 16px 32px; font-size: 18px;'
-    }
-
-    // If no href yet, render a disabled preview (non-clickable) so users can see styling.
-    if (!href) {
-      return `
-<!-- SwiftPay Payment Button (disabled preview - create a payment link above) -->
-<a href="#" 
-   style="${styles[buttonStyle as keyof typeof styles]} ${sizes[buttonSize as keyof typeof sizes]} text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; transition: all 0.2s; opacity: 0.6; pointer-events: none;" aria-disabled="true" title="Create a payment link above to enable">
-  ${buttonText}
-</a>
-<!-- End SwiftPay Button -->`
     }
 
     return `
@@ -387,7 +382,7 @@ window.location.href = checkoutUrl;`
                     <div className="text-center">
                       <div className="mb-3" dangerouslySetInnerHTML={{ __html: generateButtonCode() }} />
                       <div className="text-xs text-gray-500">
-                        {createdLink ? 'This button will open a QR checkout page.' : 'Tip: Click "Generate Payment Request" below to create a QR link for this button.'}
+                        Clicking the button will create a payment request and redirect to the Pay page.
                       </div>
                     </div>
                   </div>
