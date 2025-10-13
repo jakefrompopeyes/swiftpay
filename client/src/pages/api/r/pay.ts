@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../lib/supabase-server'
+import { convertFromFiat } from '../../../lib/price'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -54,10 +55,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
+    // If amount passed is in USD, convert to crypto for storage/QR math
+    const cryptoAmount = parsedAmount > 0 ? await convertFromFiat(parsedAmount, upperCurrency) : 0
+
     const paymentRequest = {
       // Let Supabase generate UUID id
       user_id: merchantId,
-      amount: parsedAmount,
+      amount: cryptoAmount,
       currency: upperCurrency,
       network: wallet.network,
       description: safeDescription,
