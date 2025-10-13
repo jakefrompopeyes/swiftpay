@@ -13,7 +13,10 @@ const COINGECKO_IDS: Record<string, string> = {
   SOL: 'solana',
   DOT: 'polkadot',
   LINK: 'chainlink',
-  MATIC: 'polygon-pos'
+  // Use the correct CoinGecko ID for MATIC (gas token on Polygon PoS)
+  MATIC: 'matic-network',
+  // Support POL (new Polygon token) in case we ever need it
+  POL: 'polygon-ecosystem-token'
 }
 
 async function fetchCoinGeckoPrice(symbol: string): Promise<number> {

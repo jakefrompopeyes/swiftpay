@@ -31,7 +31,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const parsedAmount = amount ? parseFloat(String(amount)) : 0
     const safeDescription = description ? String(description) : ''
-    const upperCurrency = String(currency).toUpperCase()
+    let upperCurrency = String(currency).toUpperCase()
+    // Normalize Polygon symbols: accept MATIC or POL, always treat as MATIC price for gas token
+    if (upperCurrency === 'POL') upperCurrency = 'MATIC'
 
     // Find merchant wallet for requested currency
     const { data: wallet, error: walletErr } = await supabaseAdmin

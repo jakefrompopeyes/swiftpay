@@ -144,7 +144,8 @@ export default function PayRequest() {
   const handleWalletSelect = async (wallet: any) => {
     setSelectedWallet(wallet)
     // compute amount in selected currency based on USD equivalent
-    const price = prices[wallet.currency?.toUpperCase?.()] || 0
+    const symbol = (wallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : wallet.currency?.toUpperCase?.()
+    const price = prices[symbol as string] || 0
     const amountToPay = usdAmount && price > 0 ? usdAmount / price : data.amount
     setCurrentAmount(amountToPay)
     const uri = buildPaymentUri(wallet.network, wallet.address, amountToPay, wallet.currency)
@@ -176,12 +177,14 @@ export default function PayRequest() {
   // whenever prices and initial data are available, compute usd amount and default currentAmount
   useEffect(() => {
     if (!data || !prices || Object.keys(prices).length === 0) return
-    const price = prices[data.currency?.toUpperCase?.()] || 0
+    const baseSymbol = (data.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : data.currency?.toUpperCase?.()
+    const price = prices[baseSymbol as string] || 0
     if (price > 0) {
       const usd = parseFloat(String(data.amount)) * price
       setUsdAmount(usd)
       if (selectedWallet) {
-        const selPrice = prices[selectedWallet.currency?.toUpperCase?.()] || 0
+        const selSymbol = (selectedWallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : selectedWallet.currency?.toUpperCase?.()
+        const selPrice = prices[selSymbol as string] || 0
         const amt = selPrice > 0 ? usd / selPrice : data.amount
         setCurrentAmount(amt)
       } else {
