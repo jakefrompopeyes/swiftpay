@@ -1,18 +1,14 @@
 // Coinbase Developer Platform (CDP) integration for Vercel Functions
-// Using dynamic import to handle ESM modules in Vercel Functions
+// Using the working CDP bridge from server-side code
 
-// CDP configuration
-const apiKey = process.env.CDP_API_KEY_ID;
-const apiSecret = process.env.CDP_API_KEY_SECRET;
-
-// Dynamic import of CDP SDK
-async function getCDPClient() {
+// Dynamic import of CDP bridge
+async function getCDPBridge() {
   try {
-    const { CdpClient } = await import('@coinbase/cdp-sdk');
-    return new CdpClient();
+    const bridge = await import('./cdp-bridge.mjs');
+    return bridge;
   } catch (error) {
-    console.error('Failed to import CDP SDK:', error);
-    throw new Error('CDP SDK not available');
+    console.error('Failed to import CDP bridge:', error);
+    throw new Error('CDP bridge not available');
   }
 }
 
@@ -59,20 +55,16 @@ class CoinbaseCloudService {
    */
   async createEVMWallet(network: string = 'ethereum'): Promise<WalletResult> {
     try {
-      if (!apiKey || !apiSecret) {
-        throw new Error('CDP API credentials not found');
-      }
-
-      const cdp = await getCDPClient();
+      const bridge = await getCDPBridge();
       
       // Create a new EVM account using Coinbase CDP
-      const account = await cdp.evm.createAccount();
+      const result = await bridge.createEVMWallet(network);
       
       return {
-        walletId: account.address,
-        address: account.address,
-        network,
-        currency: this.getCurrencyForNetwork(network),
+        walletId: result.walletId,
+        address: result.address,
+        network: result.network,
+        currency: result.currency,
         balance: '0.0000'
       };
     } catch (error: any) {
@@ -86,20 +78,16 @@ class CoinbaseCloudService {
    */
   async createSolanaWallet(): Promise<WalletResult> {
     try {
-      if (!apiKey || !apiSecret) {
-        throw new Error('CDP API credentials not found');
-      }
-
-      const cdp = await getCDPClient();
+      const bridge = await getCDPBridge();
       
       // Create a new Solana account using Coinbase CDP
-      const account = await cdp.solana.createAccount();
+      const result = await bridge.createSolanaWallet();
       
       return {
-        walletId: account.address,
-        address: account.address,
-        network: 'solana',
-        currency: 'SOL',
+        walletId: result.walletId,
+        address: result.address,
+        network: result.network,
+        currency: result.currency,
         balance: '0.0000'
       };
     } catch (error: any) {
@@ -113,13 +101,18 @@ class CoinbaseCloudService {
    */
   async createBitcoinWallet(): Promise<WalletResult> {
     try {
-      if (!apiKey || !apiSecret) {
-        throw new Error('CDP API credentials not found');
-      }
-
-      // Bitcoin is not yet supported by CDP SDK
-      // Skip Bitcoin wallet creation for now
-      throw new Error('Bitcoin wallets are not yet supported by Coinbase CDP SDK');
+      const bridge = await getCDPBridge();
+      
+      // Create a new Bitcoin account using Coinbase CDP
+      const result = await bridge.createBitcoinWallet();
+      
+      return {
+        walletId: result.walletId,
+        address: result.address,
+        network: result.network,
+        currency: result.currency,
+        balance: '0.00000000'
+      };
     } catch (error: any) {
       console.error('Failed to create Bitcoin wallet:', error);
       throw new Error(`Failed to create Bitcoin wallet: ${error.message}`);
@@ -131,13 +124,18 @@ class CoinbaseCloudService {
    */
   async createTronWallet(): Promise<WalletResult> {
     try {
-      if (!apiKey || !apiSecret) {
-        throw new Error('CDP API credentials not found');
-      }
-
-      // TRON is not yet supported by CDP SDK
-      // Skip TRON wallet creation for now
-      throw new Error('TRON wallets are not yet supported by Coinbase CDP SDK');
+      const bridge = await getCDPBridge();
+      
+      // Create a new TRON account using Coinbase CDP
+      const result = await bridge.createTronWallet();
+      
+      return {
+        walletId: result.walletId,
+        address: result.address,
+        network: result.network,
+        currency: result.currency,
+        balance: '0.0000'
+      };
     } catch (error: any) {
       console.error('Failed to create TRON wallet:', error);
       throw new Error(`Failed to create TRON wallet: ${error.message}`);
@@ -149,20 +147,16 @@ class CoinbaseCloudService {
    */
   async createBSCWallet(): Promise<WalletResult> {
     try {
-      if (!apiKey || !apiSecret) {
-        throw new Error('CDP API credentials not found');
-      }
-
-      const cdp = await getCDPClient();
+      const bridge = await getCDPBridge();
       
       // Create a new BSC account using Coinbase CDP
-      const account = await cdp.evm.createAccount();
+      const result = await bridge.createBSCWallet();
       
       return {
-        walletId: account.address,
-        address: account.address,
+        walletId: result.walletId,
+        address: result.address,
         network: 'binance',
-        currency: 'BNB',
+        currency: result.currency,
         balance: '0.0000'
       };
     } catch (error: any) {
@@ -176,14 +170,8 @@ class CoinbaseCloudService {
    */
   async getWalletBalance(address: string, network: string): Promise<string> {
     try {
-      // For now, return 0 balance as wallets start empty
-      // In production, you would fetch real balance from the blockchain
-      const balanceMap: { [key: string]: string } = {
-        'ethereum': '0.0000',
-        'solana': '0.0000',
-        'binance': '0.0000'
-      };
-      return balanceMap[network] || '0.0000';
+      const bridge = await getCDPBridge();
+      return await bridge.getWalletBalance(address, network);
     } catch (error: any) {
       console.error(`Failed to get balance for ${address} on ${network}:`, error);
       return '0.0000';
@@ -195,13 +183,8 @@ class CoinbaseCloudService {
    */
   async requestFaucet(address: string, network: string, token: string = 'eth'): Promise<any> {
     try {
-      // For now, return a mock faucet response
-      // In production, you would integrate with testnet faucets
-      return {
-        amount: '0.1',
-        txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-        message: `Faucet request successful for ${token}`
-      };
+      const bridge = await getCDPBridge();
+      return await bridge.requestFaucet(address, network, token);
     } catch (error: any) {
       console.error('Failed to request faucet:', error);
       throw new Error(`Failed to request faucet: ${error.message}`);
@@ -246,8 +229,10 @@ class CoinbaseCloudService {
    */
   getSupportedNetworks(): Array<{network: string, name: string, currency: string}> {
     return [
+      { network: 'bitcoin', name: 'Bitcoin', currency: 'BTC' },
       { network: 'ethereum', name: 'Ethereum', currency: 'ETH' },
       { network: 'solana', name: 'Solana', currency: 'SOL' },
+      { network: 'tron', name: 'TRON', currency: 'TRX' },
       { network: 'binance', name: 'BNB Smart Chain', currency: 'BNB' }
     ];
   }

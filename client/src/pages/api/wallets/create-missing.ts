@@ -10,10 +10,12 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
   return authenticateToken(req, res, async () => {
     try {
-      // Define supported networks and their currencies (only CDP supported networks)
+      // Define supported networks and their currencies
       const supportedNetworks = [
+        { network: 'bitcoin', currency: 'BTC' },
         { network: 'ethereum', currency: 'ETH' },
         { network: 'solana', currency: 'SOL' },
+        { network: 'tron', currency: 'TRX' },
         { network: 'binance', currency: 'BNB' }
       ];
 

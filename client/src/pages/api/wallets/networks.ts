@@ -8,8 +8,17 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
   return authenticateToken(req, res, async () => {
     try {
-      // Return supported networks (only CDP supported networks)
+      // Return supported networks
       const networks = [
+        {
+          network: 'bitcoin',
+          name: 'Bitcoin',
+          currency: 'BTC',
+          type: 'UTXO',
+          icon: '🟠',
+          description: 'Bitcoin Mainnet',
+          testnet: false
+        },
         {
           network: 'ethereum',
           name: 'Ethereum',
@@ -26,6 +35,15 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           type: 'SOL',
           icon: '🟣',
           description: 'Solana Mainnet',
+          testnet: false
+        },
+        {
+          network: 'tron',
+          name: 'TRON',
+          currency: 'TRX',
+          type: 'TRON',
+          icon: '🔴',
+          description: 'TRON Mainnet',
           testnet: false
         },
         {
