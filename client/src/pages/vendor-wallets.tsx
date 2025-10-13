@@ -72,8 +72,9 @@ export default function VendorWallets() {
     const userData = localStorage.getItem('swiftpay_user')
 
     if (!token || !userData) {
-      // For demo purposes, show mock wallets instead of redirecting
-      loadMockWallets()
+      // No auth: do not load any wallets; require login
+      setWallets([])
+      setIsLoading(false)
       return
     }
 
@@ -82,50 +83,9 @@ export default function VendorWallets() {
   }, [router])
 
   const loadMockWallets = () => {
-    console.log('Loading mock wallets...')
-    const mockWallets: Wallet[] = [
-      {
-        id: '1',
-        address: '0xbF0a1234567890abcdef1234567890abcdef1234',
-        network: 'ethereum',
-        currency: 'ETH',
-        created_at: '2025-10-09T00:00:00Z'
-      },
-      {
-        id: '2',
-        address: 'bc1qyn1234567890abcdef1234567890abcdef1234567890',
-        network: 'bitcoin',
-        currency: 'BTC',
-        created_at: '2025-10-09T00:00:00Z'
-      },
-      {
-        id: '3',
-        address: 'GGQX9F1234567890abcdef1234567890abcdef1234567890FkjJ',
-        network: 'solana',
-        currency: 'SOL',
-        created_at: '2025-10-09T00:00:00Z'
-      },
-      {
-        id: '4',
-        address: 'Tihy0o1234567890abcdef1234567890abcdef1234567890808e',
-        network: 'tron',
-        currency: 'TRX',
-        created_at: '2025-10-09T00:00:00Z'
-      },
-      {
-        id: '5',
-        address: '0x54751234567890abcdef1234567890abcdef1234567890fA30',
-        network: 'bsc',
-        currency: 'BNB',
-        created_at: '2025-10-09T00:00:00Z'
-      }
-    ]
-    
-    console.log('Mock wallets created:', mockWallets)
-    setWallets(mockWallets)
-    fetchCryptoLogos(mockWallets)
+    // Remove mock wallets entirely
+    setWallets([])
     setIsLoading(false)
-    console.log('Mock wallets loaded, isLoading set to false')
   }
 
   const fetchWallets = async () => {

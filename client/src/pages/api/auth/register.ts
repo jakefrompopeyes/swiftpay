@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { network: 'binance', currency: 'BNB' }
     ];
 
-    // Create wallets using Coinbase Cloud
+    // Create wallets using Coinbase Cloud - only for networks that produce real CDP wallets
     const walletsToCreate = [];
     
     for (const network of supportedNetworks) {
@@ -107,11 +107,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Insert default wallets if any were created
+    // Insert default wallets if any were created (filter non-CDP wallets just in case)
     if (walletsToCreate.length > 0) {
       const { error: walletError } = await supabaseAdmin
         .from('wallets')
-        .insert(walletsToCreate);
+        .insert(
+          walletsToCreate.filter(w => ['ethereum', 'solana', 'binance'].includes(w.network))
+        );
 
       if (walletError) {
         console.error('Failed to create default wallets:', walletError);

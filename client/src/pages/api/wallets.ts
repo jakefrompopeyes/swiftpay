@@ -7,11 +7,19 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     return authenticateToken(req, res, async () => {
       try {
+        // Only return wallets that are real Coinbase CDP wallets
+        // Criteria:
+        // - Created by our CDP integration (private_key starts with "coinbase_cloud_")
+        // - Network is one of the supported networks that map to CDP (ethereum, solana, binance)
+        const allowedNetworks = ['ethereum', 'solana', 'binance'];
+
         const { data: wallets, error } = await supabaseAdmin
           .from('wallets')
           .select('id, address, network, currency, balance, is_active, created_at')
           .eq('user_id', req.user!.id)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .in('network', allowedNetworks)
+          .like('private_key', 'coinbase_cloud_%');
 
         if (error) {
           return res.status(500).json({

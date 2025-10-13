@@ -35,9 +35,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // Find missing networks
+      // Find missing networks (only for networks that produce real CDP wallets)
       const existingCurrencies = new Set(
-        existingWallets?.map(w => w.currency) || []
+        (existingWallets || [])
+          .filter(w => ['ETH', 'SOL', 'BNB'].includes(w.currency))
+          .map(w => w.currency)
       );
       
       const missingNetworks = supportedNetworks.filter(
