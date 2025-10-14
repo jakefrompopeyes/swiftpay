@@ -19,6 +19,12 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           .maybeSingle()
 
         if (error) {
+          const code = (error as any).code
+          const message = String((error as any).message || '')
+          // If table doesn't exist yet (migration not applied), return empty settings gracefully
+          if (code === '42P01' || /relation .*merchant_settings.* does not exist/i.test(message)) {
+            return res.json({ success: true, data: null })
+          }
           return res.status(500).json({ success: false, error: 'Failed to load settings' })
         }
         return res.json({ success: true, data: data || null })
@@ -45,6 +51,11 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           .maybeSingle()
 
         if (error) {
+          const code = (error as any).code
+          const message = String((error as any).message || '')
+          if (code === '42P01' || /relation .*merchant_settings.* does not exist/i.test(message)) {
+            return res.status(400).json({ success: false, error: 'Settings storage not initialized. Please run DB migrations.' })
+          }
           return res.status(500).json({ success: false, error: 'Failed to save settings' })
         }
         return res.json({ success: true, data })

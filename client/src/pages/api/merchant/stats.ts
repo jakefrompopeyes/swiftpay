@@ -36,6 +36,15 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
 
       const userId = (req2.user as any)!.id;
 
+      // Expire pending payments older than 5 minutes
+      const threshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      await supabaseAdmin
+        .from('payment_requests')
+        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .lt('created_at', threshold);
+
       // Get payment requests for this merchant
       const { data: payments, error: paymentsError } = await supabaseAdmin
         .from('payment_requests')

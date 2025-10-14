@@ -252,13 +252,19 @@ export default function MerchantDashboard() {
                             <p className="text-sm font-medium text-gray-900">
                               {formatCurrency(transaction.amount)} {transaction.currency}
                             </p>
-                            <div className="flex items-center">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {transaction.status}
-                              </span>
-                            </div>
+                                  <div className="flex items-center">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      transaction.status === 'completed'
+                                        ? 'bg-green-100 text-green-800'
+                                        : (transaction.status === 'failed' || transaction.status === 'expired')
+                                          ? 'bg-rose-100 text-rose-800'
+                                          : transaction.status === 'underpaid'
+                                            ? 'bg-orange-100 text-orange-800'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {transaction.status}
+                                    </span>
+                                  </div>
                             <p className="text-xs text-gray-500">{formatDate(transaction.timestamp)}</p>
                           </div>
                         </div>

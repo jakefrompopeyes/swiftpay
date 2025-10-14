@@ -29,6 +29,15 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       const userId = (req2.user as any)!.id
+
+      // Expire pending payments older than 5 minutes
+      const threshold = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+      await supabaseAdmin
+        .from('payment_requests')
+        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .lt('created_at', threshold)
       const days = Math.max(1, Math.min(60, parseInt(String(req.query.days || '30'), 10)))
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
