@@ -1,20 +1,34 @@
 import { NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../lib/supabase-server'
 import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware'
+import { authenticateApiKey } from '../../../lib/api-key-auth'
 import { getPrice } from '../../../lib/price'
 
-export default function handler(req: AuthRequest, res: NextApiResponse) {
+export default async function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, error: 'Method not allowed' })
   }
 
-  return authenticateToken(req, res, async () => {
+  // Try API key first
+  const header = (req.headers['authorization'] || req.headers['x-api-key']) as string | undefined
+  const apiKey = header?.startsWith('Bearer ') ? header.slice(7) : header
+  if (apiKey && apiKey.startsWith('sk_')) {
+    const result = await authenticateApiKey(apiKey, 120)
+    if (!result.ok) return res.status(401).json({ success: false, error: result.error })
+    // Attach minimal user to req-like context
+    ;(req as any).user = { id: result.userId }
+    return run(req, res)
+  }
+
+  return authenticateToken(req, res, () => run(req, res))
+
+  async function run(req2: AuthRequest, res2: NextApiResponse) {
     try {
       if (!supabaseAdmin) {
         return res.status(500).json({ success: false, error: 'Database not configured' })
       }
 
-      const userId = req.user!.id
+      const userId = (req2.user as any)!.id
       const days = Math.max(1, Math.min(60, parseInt(String(req.query.days || '30'), 10)))
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
@@ -134,13 +148,13 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         return res.status(200).send(csv)
       }
 
-      res.json({ success: true, data: chartData })
+      res2.json({ success: true, data: chartData })
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Revenue error:', err)
-      res.status(500).json({ success: false, error: 'Internal server error' })
+      res2.status(500).json({ success: false, error: 'Internal server error' })
     }
-  })
+  }
 }
 
 
