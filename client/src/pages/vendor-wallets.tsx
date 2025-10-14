@@ -66,6 +66,7 @@ export default function VendorWallets() {
   const [showQRCode, setShowQRCode] = useState<string | null>(null)
   const [creatingLinkFor, setCreatingLinkFor] = useState<string | null>(null)
   const [cryptoLogos, setCryptoLogos] = useState<Record<string, string>>({})
+  const [prices, setPrices] = useState<Record<string, number>>({})
   const router = useRouter()
 
   useEffect(() => {
@@ -81,6 +82,10 @@ export default function VendorWallets() {
 
     fetchWallets()
     fetchNetworks()
+    // Load prices
+    fetch('/api/prices', { cache: 'no-store' })
+      .then(r => r.json())
+      .then((res) => { if (res?.success) setPrices(res.data || {}) })
   }, [router])
 
   const loadMockWallets = () => {
@@ -445,8 +450,19 @@ export default function VendorWallets() {
     showTestnets ? network.testnet : !network.testnet
   )
 
-  const totalBalance = Object.values(balances).reduce((sum, balance) => {
-    return sum + parseFloat(balance || '0')
+  const normalizeSymbol = (sym: string | undefined | null) => {
+    const s = (sym || '').toUpperCase()
+    return s === 'POL' ? 'MATIC' : s
+  }
+
+  const priceFor = (sym: string | undefined | null) => {
+    const key = normalizeSymbol(sym)
+    return prices[key] || 0
+  }
+
+  const totalBalance = wallets.reduce((sum, w) => {
+    const amt = parseFloat(balances[w.id] || '0')
+    return sum + amt * priceFor(w.currency)
   }, 0)
 
   return (
@@ -644,15 +660,24 @@ export default function VendorWallets() {
                         <div className="flex items-center space-x-4">
                           <div className="text-right">
                             <p className="text-lg font-medium text-gray-900">
-                              {balances[wallet.id] || '0.0000'} {wallet.currency}
+                              {(() => {
+                                const amt = parseFloat(balances[wallet.id] || '0')
+                                const usd = amt * priceFor(wallet.currency)
+                                return `$${usd.toFixed(2)}`
+                              })()}
                             </p>
-                            <p className="text-sm text-gray-500">Balance</p>
+                            <p className="text-xs text-gray-500">
+                              {(balances[wallet.id] || '0.0000')} {wallet.currency}
+                            </p>
                             {/* Stablecoin balances (if any) */}
                             {tokenBalances[wallet.id] && (
                               <div className="mt-1 text-xs text-gray-600 space-y-0.5">
                                 {Object.entries(tokenBalances[wallet.id]).map(([sym, bal]) => (
                                   <div key={`${wallet.id}-${sym}`} className="flex justify-end">
-                                    <span>{sym}: {bal}</span>
+                                    <span>
+                                      {sym}: ${(parseFloat(bal || '0') * priceFor(sym)).toFixed(2)}
+                                      <span className="ml-1 text-gray-400">({bal})</span>
+                                    </span>
                                   </div>
                                 ))}
                               </div>
