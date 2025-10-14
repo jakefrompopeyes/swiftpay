@@ -2,7 +2,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
-  UserIcon,
   BuildingStorefrontIcon,
   CreditCardIcon,
   DocumentTextIcon,
@@ -127,21 +126,14 @@ export default function LeftNavigation() {
       ]
     },
     {
-      title: 'Authentication',
+      title: 'Account',
       items: [
         {
-          id: 'login',
-          name: 'Login',
-          href: '/login',
-          icon: UserIcon,
-          description: 'User login'
-        },
-        {
-          id: 'register',
-          name: 'Register',
-          href: '/register',
-          icon: UserIcon,
-          description: 'Create account'
+          id: 'settings',
+          name: 'Settings',
+          href: '/settings',
+          icon: CogIcon,
+          description: 'Manage account & preferences'
         }
       ]
     }

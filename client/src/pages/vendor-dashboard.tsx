@@ -129,16 +129,16 @@ export default function VendorDashboard() {
               <span className="text-2xl">🏪</span>
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Welcome to SwiftPay!
+              Welcome to SwiftSpace!
             </h2>
             <p className="text-gray-600 mb-6">
-              You need to create a vendor profile to start accepting crypto payments.
+              Start by creating a payment integration to start accepting crypto payments.
             </p>
             <Link
               href="/merchant-tools"
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
-              Set Up Vendor Profile
+              Set Up Payment Integration
             </Link>
           </div>
         </div>
