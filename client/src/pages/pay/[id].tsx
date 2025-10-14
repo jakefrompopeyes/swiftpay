@@ -5,6 +5,7 @@ import Link from 'next/link'
 import QRCode from 'qrcode'
 import { realtime, ServerEvent } from '../../services/realtime'
 import { cryptoLogoService } from '../../services/cryptoLogos'
+import { getTokenInfo, toBaseUnits } from '../../lib/tokens'
 import { 
   ArrowLeftIcon, 
   CheckCircleIcon, 
@@ -27,6 +28,7 @@ export default function PayRequest() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [usdAmount, setUsdAmount] = useState<number | null>(null)
   const [currentAmount, setCurrentAmount] = useState<number | null>(null)
+  const stableSet = new Set(['USDC','USDT','DAI'])
 
   const getEvmChainId = (network: string | undefined | null): number | null => {
     switch ((network || '').toLowerCase()) {
@@ -41,51 +43,27 @@ export default function PayRequest() {
 
   const buildPaymentUri = (network: string, address: string, amount: number, currency: string) => {
     const isSol = (network || '').toLowerCase() === 'solana'
-    const scheme = isSol ? 'solana' : 'ethereum'
     const chainId = isSol ? null : getEvmChainId(network)
-    // EVM wallets: EIP-681 for native coin and ERC-20 transfers
-    // Solana: solana:<address>?amount=<amount>&spl-token=<mint>
-    const toUnits = (amt: number, decimals: number): string => {
-      const s = (amt || 0).toFixed(decimals)
-      const [ints, decs] = s.split('.')
-      const joined = `${ints}${decs || ''}`.replace(/^0+/, '')
-      return joined === '' ? '0' : joined
-    }
-
     const symbol = (currency || '').toUpperCase()
 
-    // Token-aware construction
     if (isSol) {
-      // SPL token support for USDC/USDT; native SOL otherwise
-      const splMap: Record<string, { mint: string; decimals: number }> = {
-        USDC: { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
-        USDT: { mint: 'Es9vMFrzaCERG1bG1Nsx3Rp3XIanFkFJxux1kvZWS9G', decimals: 6 }
-      }
-      if (splMap[symbol]) {
-        const units = toUnits(amount, splMap[symbol].decimals)
-        return `solana:${address}?amount=${amount}&spl-token=${splMap[symbol].mint}&reference=${units}`
+      const token = getTokenInfo('solana', symbol)
+      if (token && token.standard === 'spl') {
+        const units = toBaseUnits(amount, token.decimals)
+        return `solana:${address}?amount=${amount}&spl-token=${token.address}&reference=${units}`
       }
       return `solana:${address}?amount=${amount}`
     }
 
-    // EVM: handle stablecoins as ERC-20 transfers
-    const erc20Map: Record<string, { address: string; decimals: number }> = {
-      // Ethereum mainnet addresses; wallets on L2s often resolve via chainId in URI
-      USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-      USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-      DAI:  { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 }
-    }
-    if (erc20Map[symbol]) {
-      const token = erc20Map[symbol]
+    const token = getTokenInfo((network || '').toLowerCase(), symbol)
+    if (token && token.standard === 'erc20') {
       const atChain = chainId ? `@${chainId}` : ''
-      const units = toUnits(amount, token.decimals)
-      // EIP-681 token transfer: ethereum:token@chainId/transfer?address=to&uint256=<amount>
+      const units = toBaseUnits(amount, token.decimals)
       return `ethereum:${token.address}${atChain}/transfer?address=${address}&uint256=${units}`
     }
 
-    // Native coin
     const atChain = chainId ? `@${chainId}` : ''
-    const wei = toUnits(amount, 18)
+    const wei = toBaseUnits(amount, 18)
     return `ethereum:${address}${atChain}?value=${wei}`
   }
 
@@ -259,71 +237,126 @@ export default function PayRequest() {
                   </h2>
                   
                   <div className="space-y-3">
-                    {(options?.wallets || []).map((wallet) => {
-                      const isSelected = selectedWallet?.id === wallet.id && selectedWallet?.currency === wallet.currency
-                      const logoUrl = cryptoLogoService.getLogoUrl(wallet.currency)
-                      const hasLogo = cryptoLogoService.hasLogoUrl(wallet.currency)
-                      
-                      return (
-                        <div
-                          key={`${wallet.id}-${wallet.currency}`}
-                          className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                            isSelected
-                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                              : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                          }`}
-                          onClick={() => handleWalletSelect(wallet)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="relative">
-                                {hasLogo ? (
-                                  <img
-                                    src={logoUrl}
-                                    alt={`${wallet.currency} logo`}
-                                    className="w-10 h-10 rounded-full"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement
-                                      target.style.display = 'none'
-                                      const fallback = target.nextElementSibling as HTMLElement
-                                      if (fallback) fallback.style.display = 'flex'
-                                    }}
-                                  />
-                                ) : null}
-                                <div 
-                                  className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                                    hasLogo ? 'hidden' : 'flex'
-                                  }`}
-                                  style={{ backgroundColor: '#f3f4f6' }}
-                                >
-                                  {cryptoLogoService.getLogoUrl(wallet.currency)}
+                    {(() => {
+                      const wallets = (options?.wallets || [])
+                      // Group stablecoins by currency
+                      const groups: Record<string, any[]> = {}
+                      const others: any[] = []
+                      for (const w of wallets) {
+                        const sym = (w.currency || '').toUpperCase()
+                        if (stableSet.has(sym)) {
+                          groups[sym] = groups[sym] || []
+                          groups[sym].push(w)
+                        } else {
+                          others.push(w)
+                        }
+                      }
+
+                      const stableCards = Object.keys(groups).map((sym) => {
+                        const variants = groups[sym]
+                        const current = (selectedWallet && selectedWallet.currency?.toUpperCase() === sym)
+                          ? selectedWallet
+                          : variants[0]
+                        const isSelected = selectedWallet?.currency?.toUpperCase() === sym
+                        const logoUrl = cryptoLogoService.getLogoUrl(sym)
+                        const hasLogo = cryptoLogoService.hasLogoUrl(sym)
+                        return (
+                          <div
+                            key={`stable-${sym}`}
+                            className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                              isSelected ? 'border-indigo-500 bg-indigo-50 shadow-md' : 'border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="relative">
+                                  {hasLogo ? (
+                                    <img src={logoUrl} alt={`${sym} logo`} className="w-10 h-10 rounded-full" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: '#f3f4f6' }}>
+                                      {cryptoLogoService.getLogoUrl(sym)}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-semibold text-gray-900">{sym}</span>
+                                    <select
+                                      className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-md"
+                                      value={`${current.network}`}
+                                      onChange={(e) => {
+                                        const next = variants.find(v => String(v.network) === e.target.value) || variants[0]
+                                        handleWalletSelect(next)
+                                      }}
+                                    >
+                                      {variants.map(v => (
+                                        <option key={`${sym}-${v.network}`} value={v.network}>{v.network}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="text-sm text-gray-500 font-mono">
+                                    {current.address.slice(0, 8)}...{current.address.slice(-6)}
+                                  </div>
                                 </div>
                               </div>
-                              
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-semibold text-gray-900">{wallet.currency}</span>
-                                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                                    {wallet.network}
-                                  </span>
-                                </div>
-                                <div className="text-sm text-gray-500 font-mono">
-                                  {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isSelected
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'
-                            }`}>
-                              {isSelected ? 'Selected' : 'Select'}
+                              <button
+                                onClick={() => handleWalletSelect(current)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'
+                                }`}
+                              >
+                                {isSelected ? 'Selected' : 'Select'}
+                              </button>
                             </div>
                           </div>
-                        </div>
+                        )
+                      })
+
+                      const otherCards = others.map((wallet) => {
+                        const isSelected = selectedWallet?.id === wallet.id && selectedWallet?.currency === wallet.currency
+                        const logoUrl = cryptoLogoService.getLogoUrl(wallet.currency)
+                        const hasLogo = cryptoLogoService.hasLogoUrl(wallet.currency)
+                        return (
+                          <div
+                            key={`${wallet.id}-${wallet.currency}`}
+                            className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                              isSelected ? 'border-indigo-500 bg-indigo-50 shadow-md' : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                            }`}
+                            onClick={() => handleWalletSelect(wallet)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="relative">
+                                  {hasLogo ? (
+                                    <img src={logoUrl} alt={`${wallet.currency} logo`} className="w-10 h-10 rounded-full" />
+                                  ) : null}
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${hasLogo ? 'hidden' : 'flex'}`} style={{ backgroundColor: '#f3f4f6' }}>
+                                    {cryptoLogoService.getLogoUrl(wallet.currency)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-semibold text-gray-900">{wallet.currency}</span>
+                                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">{wallet.network}</span>
+                                  </div>
+                                  <div className="text-sm text-gray-500 font-mono">{wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}</div>
+                                </div>
+                              </div>
+                              <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'}`}>
+                                {isSelected ? 'Selected' : 'Select'}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+
+                      return (
+                        <>
+                          {stableCards}
+                          {otherCards}
+                        </>
                       )
-                    })}
+                    })()}
                   </div>
                 </div>
               </div>
