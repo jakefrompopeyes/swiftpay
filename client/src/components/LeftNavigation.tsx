@@ -65,32 +65,7 @@ export default function LeftNavigation() {
         }
       ]
     },
-    {
-      title: 'User Dashboard',
-      items: [
-        {
-          id: 'dashboard',
-          name: 'Dashboard',
-          href: '/dashboard',
-          icon: UserIcon,
-          description: 'User dashboard'
-        },
-        {
-          id: 'transactions',
-          name: 'Transactions',
-          href: '/transactions',
-          icon: DocumentTextIcon,
-          description: 'Transaction history'
-        },
-        {
-          id: 'convert-usdc',
-          name: 'Convert to USDC',
-          href: '/convert-usdc',
-          icon: CurrencyDollarIcon,
-          description: 'Convert crypto to USDC'
-        }
-      ]
-    },
+    // Removed User Dashboard section per request
     {
       title: 'Merchant Tools',
       items: [
