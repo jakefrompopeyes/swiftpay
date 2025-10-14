@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { 
@@ -23,8 +23,11 @@ export default function MerchantPayments() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('')
   const [selectedCrypto, setSelectedCrypto] = useState('USDC')
 
-  const availableBalance = 2847.50
-  const pendingBalance = 156.80
+  const [availableBalance, setAvailableBalance] = useState(0)
+  const [pendingBalance, setPendingBalance] = useState(0)
+  const [history, setHistory] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const withdrawalMethods = [
     {
@@ -56,55 +59,9 @@ export default function MerchantPayments() {
     }
   ]
 
-  const cryptoOptions = [
-    { symbol: 'USDC', name: 'USD Coin', balance: 2847.50, icon: '🔵' },
-    { symbol: 'BTC', name: 'Bitcoin', balance: 0.1234, icon: '🟠' },
-    { symbol: 'ETH', name: 'Ethereum', balance: 1.4567, icon: '🔷' },
-    { symbol: 'MATIC', name: 'Polygon', balance: 150.7890, icon: '🟣' }
-  ]
+  const [cryptoOptions, setCryptoOptions] = useState<Array<{symbol:string,name:string,balance:number,icon:string}>>([])
 
-  const recentTransactions = [
-    {
-      id: 'tx-001',
-      type: 'withdrawal',
-      amount: 500.00,
-      currency: 'USDC',
-      status: 'completed',
-      method: 'Bank Transfer',
-      date: '2024-01-15T10:30:00Z',
-      fee: 7.50
-    },
-    {
-      id: 'tx-002',
-      type: 'payment',
-      amount: 125.50,
-      currency: 'USDC',
-      status: 'completed',
-      method: 'Crypto Payment',
-      date: '2024-01-15T09:15:00Z',
-      fee: 0.63
-    },
-    {
-      id: 'tx-003',
-      type: 'withdrawal',
-      amount: 200.00,
-      currency: 'BTC',
-      status: 'pending',
-      method: 'Cryptocurrency',
-      date: '2024-01-15T08:45:00Z',
-      fee: 1.00
-    },
-    {
-      id: 'tx-004',
-      type: 'payment',
-      amount: 75.25,
-      currency: 'ETH',
-      status: 'completed',
-      method: 'Crypto Payment',
-      date: '2024-01-14T16:20:00Z',
-      fee: 0.38
-    }
-  ]
+  const recentTransactions = history
 
   const navigationItems = [
     { id: 'withdraw', name: 'Withdraw Funds', icon: ArrowDownTrayIcon, active: true },
@@ -135,6 +92,29 @@ export default function MerchantPayments() {
   const getTypeIcon = (type: string) => {
     return type === 'withdrawal' ? '📤' : '📥'
   }
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('swiftpay_token')
+        const r = await fetch('/api/merchant/finances', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        const j = await r.json()
+        if (j.success) {
+          setAvailableBalance(j.data.availableUSD || 0)
+          setPendingBalance(j.data.pendingUSD || 0)
+          setHistory(j.data.recentTransactions || [])
+          // Build crypto options from vendor wallets balances if available later; for now show USDC as default
+          setCryptoOptions([{ symbol: 'USDC', name: 'USD Coin', balance: j.data.availableUSD || 0, icon: '🔵' }])
+        } else {
+          setError(j.error || 'Failed to load data')
+        }
+      } catch (e) {
+        setError('Failed to load data')
+      } finally { setLoading(false) }
+    }
+    load()
+  }, [])
 
   return (
     <>
