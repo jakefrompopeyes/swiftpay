@@ -61,22 +61,17 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       let foundTxHash: string | null = null
 
       if (isEvm) {
-        const baseUrls: Record<string, string> = {
-          ethereum: 'https://api.etherscan.io',
-          arbitrum: 'https://api.arbiscan.io',
-          polygon: 'https://api.polygonscan.com',
-          base: 'https://api.basescan.org',
-          binance: 'https://api.bscscan.com'
+        // Etherscan V2 single endpoint with chainId param
+        const baseUrl = 'https://api.etherscan.io/v2/api'
+        const chainIds: Record<string, number> = {
+          ethereum: 1,
+          arbitrum: 42161,
+          polygon: 137,
+          base: 8453,
+          binance: 56
         }
-        const apiKeys: Record<string, string | undefined> = {
-          ethereum: process.env.ETHERSCAN_API_KEY,
-          arbitrum: process.env.ARBISCAN_API_KEY || process.env.ARBITRUM_API_KEY,
-          polygon: process.env.POLYGONSCAN_API_KEY,
-          base: process.env.BASESCAN_API_KEY,
-          binance: process.env.BSCSCAN_API_KEY
-        }
-        const baseUrl = baseUrls[network]
-        const apiKey = apiKeys[network]
+        const chainId = chainIds[network]
+        const apiKey = process.env.ETHERSCAN_API_KEY
 
         const token = getTokenInfo(network, currency)
         const minConfirmations = 5
@@ -90,7 +85,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
         if (token && token.standard === 'erc20') {
           const units = toBaseUnits(amount, token.decimals)
-          const url = `${baseUrl}/api?module=account&action=tokentx&address=${toAddress}&contractaddress=${token.address}&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
+          const url = `${baseUrl}?chainid=${chainId}&module=account&action=tokentx&address=${toAddress}&contractaddress=${token.address}&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
           const json: any = await fetchJson(url)
           const txs: any[] = json?.result || []
           const match = txs.find((tx: any) => {
@@ -103,7 +98,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         } else {
           // Native coin (ETH/BNB/MATIC, etc.)
           const wei = toBaseUnits(amount, 18)
-          const url = `${baseUrl}/api?module=account&action=txlist&address=${toAddress}&startblock=0&endblock=99999999&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
+          const url = `${baseUrl}?chainid=${chainId}&module=account&action=txlist&address=${toAddress}&startblock=0&endblock=99999999&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
           const json: any = await fetchJson(url)
           const txs: any[] = json?.result || []
           const match = txs.find((tx: any) => {
