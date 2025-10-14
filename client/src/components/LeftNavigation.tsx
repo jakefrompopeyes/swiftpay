@@ -2,7 +2,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
-  HomeIcon,
   UserIcon,
   BuildingStorefrontIcon,
   CreditCardIcon,
@@ -16,7 +15,6 @@ import {
   ArrowDownTrayIcon,
   KeyIcon,
   ShieldCheckIcon,
-  PlayCircleIcon,
   EyeIcon,
   BanknotesIcon,
   ClockIcon,
@@ -48,20 +46,11 @@ export default function LeftNavigation() {
       title: 'Main',
       items: [
         {
-          id: 'home',
-          name: 'Home',
-          href: '/',
-          icon: HomeIcon,
-          description: 'SwiftSpace homepage'
-        },
-        {
-          id: 'demo',
-          name: 'Demo Mode',
-          href: '/demo',
-          icon: PlayCircleIcon,
-          description: 'Explore without signing in',
-          badge: 'NEW',
-          badgeColor: 'bg-green-100 text-green-800'
+          id: 'merchant-dashboard',
+          name: 'Merchant Dashboard',
+          href: '/merchant-dashboard',
+          icon: BuildingStorefrontIcon,
+          description: 'Business analytics'
         }
       ]
     },
@@ -69,13 +58,6 @@ export default function LeftNavigation() {
     {
       title: 'Merchant Tools',
       items: [
-        {
-          id: 'merchant-dashboard',
-          name: 'Merchant Dashboard',
-          href: '/merchant-dashboard',
-          icon: BuildingStorefrontIcon,
-          description: 'Business analytics'
-        },
         {
           id: 'checkout-generator',
           name: 'Checkout Generator',
