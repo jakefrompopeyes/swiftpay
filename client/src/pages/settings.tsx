@@ -19,6 +19,11 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({})
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [keys, setKeys] = useState<Array<{id:string,name:string,created_at:string,last_used_at:string|null}>>([])
+  const [newKeyName, setNewKeyName] = useState('')
+  const [newKeyPlain, setNewKeyPlain] = useState<string | null>(null)
+  const [testingWebhook, setTestingWebhook] = useState(false)
+  const [webhookResult, setWebhookResult] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -26,10 +31,13 @@ export default function SettingsPage() {
         setLoading(true)
         const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
         if (!token) { setError('Please log in'); setLoading(false); return }
-        const r = await fetch('/api/settings', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-        const j = await r.json()
-        if (j.success) setSettings(j.data || {})
-        else setError(j.error || 'Failed to load settings')
+        const [r, rk] = await Promise.all([
+          fetch('/api/settings', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }),
+          fetch('/api/keys', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        ])
+        const j = await r.json(); const jk = await rk.json()
+        if (j.success) setSettings(j.data || {}); else setError(j.error || 'Failed to load settings')
+        if (jk.success) setKeys(jk.data || [])
       } catch (e) { setError('Failed to load settings') }
       finally { setLoading(false) }
     }
@@ -56,6 +64,46 @@ export default function SettingsPage() {
     } catch (e: any) {
       setError(e.message || 'Failed to save settings')
     } finally { setSaving(false) }
+  }
+
+  const createKey = async () => {
+    if (!newKeyName.trim()) return
+    const token = localStorage.getItem('swiftpay_token')
+    const r = await fetch('/api/keys', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ name: newKeyName.trim() }) })
+    const j = await r.json()
+    if (j.success) {
+      setNewKeyPlain(j.data.key)
+      setNewKeyName('')
+      // reload list
+      const rk = await fetch('/api/keys', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      const jk = await rk.json(); if (jk.success) setKeys(jk.data || [])
+    } else {
+      setError(j.error || 'Failed to create key')
+    }
+  }
+
+  const deleteKey = async (id: string) => {
+    const token = localStorage.getItem('swiftpay_token')
+    const r = await fetch('/api/keys', { method: 'DELETE', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ id }) })
+    const j = await r.json(); if (!j.success) { setError(j.error || 'Failed to delete key'); return }
+    setKeys((arr) => arr.filter(k => k.id !== id))
+  }
+
+  const sendTestWebhook = async () => {
+    try {
+      setTestingWebhook(true); setWebhookResult(null)
+      const token = localStorage.getItem('swiftpay_token')
+      const r = await fetch('/api/settings/test-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url: settings.webhook_url, secret: settings.webhook_secret })
+      })
+      const j = await r.json()
+      if (j.success) setWebhookResult(`Status ${j.data.status}: ${j.data.body?.slice(0,120) || ''}`)
+      else setWebhookResult(j.error || 'Failed')
+    } catch (e:any) {
+      setWebhookResult(e.message || 'Failed')
+    } finally { setTestingWebhook(false) }
   }
 
   return (
@@ -128,6 +176,12 @@ export default function SettingsPage() {
                     <input value={settings.webhook_secret || ''} onChange={(e)=>onChange('webhook_secret', e.target.value)} className="w-full px-3 py-2 border rounded-md" />
                   </div>
                 </div>
+                <div className="mt-3 flex items-center space-x-2">
+                  <button onClick={sendTestWebhook} disabled={!settings.webhook_url || testingWebhook} className="px-3 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-md text-sm">
+                    {testingWebhook ? 'Sending…' : 'Send Test Event'}
+                  </button>
+                  {webhookResult && <span className="text-xs text-gray-600">{webhookResult}</span>}
+                </div>
                 <p className="text-xs text-gray-500 mt-2">We'll sign events with HMAC SHA-256 using this secret.</p>
               </section>
 
@@ -143,6 +197,33 @@ export default function SettingsPage() {
                     <label className="block text-sm text-gray-700 mb-1">Secondary Color</label>
                     <input type="color" value={settings.branding_secondary || '#10b981'} onChange={(e)=>onChange('branding_secondary', e.target.value)} className="w-16 h-10 p-0 border rounded" />
                   </div>
+                </div>
+              </section>
+
+              {/* API Keys */}
+              <section className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">API Keys</h2>
+                <div className="flex space-x-2 mb-3">
+                  <input value={newKeyName} onChange={(e)=>setNewKeyName(e.target.value)} placeholder="Key name (e.g., backend server)" className="flex-1 px-3 py-2 border rounded-md" />
+                  <button onClick={createKey} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">Create</button>
+                </div>
+                {newKeyPlain && (
+                  <div className="p-3 rounded-md bg-indigo-50 text-indigo-800 text-sm mb-3">
+                    Copy your new API key now: <span className="font-mono">{newKeyPlain}</span>
+                  </div>
+                )}
+                <div className="border rounded-md divide-y">
+                  {keys.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No keys yet</div>
+                  ) : keys.map((k) => (
+                    <div key={k.id} className="p-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">{k.name}</div>
+                        <div className="text-xs text-gray-500">Created {new Date(k.created_at).toLocaleString()} {k.last_used_at ? `• Last used ${new Date(k.last_used_at).toLocaleString()}` : ''}</div>
+                      </div>
+                      <button onClick={()=>deleteKey(k.id)} className="text-sm text-rose-600 hover:text-rose-700">Delete</button>
+                    </div>
+                  ))}
                 </div>
               </section>
 
