@@ -28,6 +28,9 @@ export default function PayRequest() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [usdAmount, setUsdAmount] = useState<number | null>(null)
   const [currentAmount, setCurrentAmount] = useState<number | null>(null)
+  const [refreshIntervalSec] = useState<number>(60)
+  const [nextRefreshIn, setNextRefreshIn] = useState<number>(60)
+  const [lastPriceTs, setLastPriceTs] = useState<number | null>(null)
   const stableSet = new Set(['USDC','USDT','DAI'])
 
   const getEvmChainId = (network: string | undefined | null): number | null => {
@@ -108,10 +111,13 @@ export default function PayRequest() {
       })
 
     // load prices for USD conversion
-    fetch('/api/prices')
+    fetch('/api/prices', { cache: 'no-store' })
       .then(r => r.json())
       .then((res) => {
-        if (res.success) setPrices(res.data || {})
+        if (res.success) {
+          setPrices(res.data || {})
+          setLastPriceTs(Date.now())
+        }
       })
 
     // start realtime listener
@@ -204,6 +210,52 @@ export default function PayRequest() {
       }
     }
   }, [data, prices, selectedWallet])
+
+  // Auto-refresh prices and QR periodically to keep quotes current
+  const refreshPricesAndQR = async () => {
+    try {
+      const r = await fetch('/api/prices', { cache: 'no-store' })
+      const res = await r.json()
+      if (res.success) {
+        const newPrices = res.data || {}
+        setPrices(newPrices)
+        setLastPriceTs(Date.now())
+        if (data) {
+          const baseSymbol = (data.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : data.currency?.toUpperCase?.()
+          const basePrice = newPrices[baseSymbol as string] || 0
+          const usd = basePrice > 0 ? parseFloat(String(data.amount)) * basePrice : null
+          if (usd != null) setUsdAmount(usd)
+
+          const wallet = selectedWallet
+          if (wallet) {
+            const selSymbol = (wallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : wallet.currency?.toUpperCase?.()
+            const selPrice = newPrices[selSymbol as string] || 0
+            const amt = (usd != null && selPrice > 0) ? usd / selPrice : data.amount
+            setCurrentAmount(amt)
+            const uri = buildPaymentUri(wallet.network, wallet.address, amt, wallet.currency)
+            setQr(await QRCode.toDataURL(uri))
+          }
+        }
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    // countdown and periodic refresh
+    setNextRefreshIn(refreshIntervalSec)
+    const tick = setInterval(() => {
+      setNextRefreshIn((prev) => {
+        if (prev <= 1) {
+          // time to refresh
+          refreshPricesAndQR()
+          return refreshIntervalSec
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(tick)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshIntervalSec, selectedWallet, data?.id])
 
   return (
     <>
@@ -368,6 +420,18 @@ export default function PayRequest() {
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">
                       Pay { (currentAmount ?? data.amount).toString() } { selectedWallet?.currency || data.currency }
                     </h1>
+                    <div className="text-xs text-gray-500 mb-1">
+                      Price auto-refresh in {nextRefreshIn}s
+                      {lastPriceTs && (
+                        <span className="ml-2">• Last updated {Math.max(0, Math.floor((Date.now() - lastPriceTs) / 1000))}s ago</span>
+                      )}
+                      <button
+                        onClick={refreshPricesAndQR}
+                        className="ml-2 underline text-indigo-600 hover:text-indigo-800"
+                      >
+                        Refresh now
+                      </button>
+                    </div>
                     {usdAmount != null && (
                       <p className="text-sm text-gray-500">≈ ${usdAmount.toFixed(2)} USD</p>
                     )}
