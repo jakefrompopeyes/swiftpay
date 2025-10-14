@@ -33,12 +33,12 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
       const payments = rows || []
       // Collect unique symbols for pricing
-      const symbols = Array.from(new Set(payments.map((p: any) => String(p.currency || '').toUpperCase()))).filter(Boolean)
+      const symbols: string[] = Array.from(new Set(payments.map((p: any) => String(p.currency || '').toUpperCase()))).filter(Boolean) as string[]
       const priceMap: Record<string, number> = {}
-      await Promise.all(symbols.map(async (sym) => {
+      await Promise.all(symbols.map(async (sym: string) => {
         try {
           // Map POL to MATIC as elsewhere
-          const normalized = sym === 'POL' ? 'MATIC' : sym
+          const normalized: string = sym === 'POL' ? 'MATIC' : sym
           priceMap[sym] = await getPrice(normalized)
         } catch {
           priceMap[sym] = 0
