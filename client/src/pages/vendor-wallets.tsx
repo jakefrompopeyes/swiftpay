@@ -61,6 +61,7 @@ export default function VendorWallets() {
   const [showTestnets, setShowTestnets] = useState(false)
   const [expandedWallet, setExpandedWallet] = useState<string | null>(null)
   const [balances, setBalances] = useState<Record<string, string>>({})
+  const [tokenBalances, setTokenBalances] = useState<Record<string, Record<string, string>>>({})
   const [isRefreshingBalances, setIsRefreshingBalances] = useState(false)
   const [showQRCode, setShowQRCode] = useState<string | null>(null)
   const [creatingLinkFor, setCreatingLinkFor] = useState<string | null>(null)
@@ -94,12 +95,17 @@ export default function VendorWallets() {
       const response = await backendAPI.wallets.getWallets()
       if (response.success) {
         const baseWallets: Wallet[] = response.data
-        const expanded = expandStablecoinVariants(baseWallets)
-        setWallets(expanded)
-        // Fetch balances for each base wallet (avoid synthetic token ids)
+        setWallets(baseWallets)
+        // Fetch balances for each base wallet
         await fetchAllBalances(baseWallets)
-        // Fetch logos for each displayed currency (includes tokens)
-        fetchCryptoLogos(expanded)
+        // Fetch token balances (stablecoins) per base wallet
+        await fetchStablecoinBalances(baseWallets)
+        // Fetch logos for displayed currencies (native + stables)
+        const currencies = Array.from(new Set([
+          ...baseWallets.map(w => w.currency),
+          'USDC','USDT','DAI'
+        ]))
+        setCryptoLogos(cryptoLogoService.getMultipleLogos(currencies))
       } else {
         toast.error('Failed to fetch wallets')
       }
@@ -111,29 +117,105 @@ export default function VendorWallets() {
     }
   }
 
-  const supportsErc20Tokens = (network: string) => ['ethereum','polygon','base','arbitrum','binance'].includes((network || '').toLowerCase())
+  const supportsErc20Tokens = (network: string) => ['ethereum','polygon','base','arbitrum','binance','optimism','avalanche','fantom'].includes((network || '').toLowerCase())
   const supportsSplTokens = (network: string) => (network || '').toLowerCase() === 'solana'
 
-  const expandStablecoinVariants = (walletList: Wallet[]): Wallet[] => {
-    const result: Wallet[] = []
+  const chainIds: Record<string, number> = {
+    ethereum: 1,
+    arbitrum: 42161,
+    polygon: 137,
+    base: 8453,
+    binance: 56,
+    optimism: 10,
+    avalanche: 43114,
+    fantom: 250
+  }
+
+  const tokenRegistry: Record<string, Record<string, { address: string, decimals: number }>> = {
+    ethereum: {
+      USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+      USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+      DAI:  { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 }
+    },
+    base: {
+      USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 }
+    },
+    arbitrum: {
+      USDC: { address: '0xaf88d065e77c8CC2239327C5EDb3A432268e5831', decimals: 6 },
+      USDT: { address: '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9', decimals: 6 },
+      DAI:  { address: '0xda10009cbd5d07dd0cecc66161fc93d7c9000da1', decimals: 18 }
+    },
+    polygon: {
+      USDC: { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', decimals: 6 },
+      USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
+      DAI:  { address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063', decimals: 18 }
+    },
+    binance: {
+      USDC: { address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', decimals: 18 },
+      USDT: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+      DAI:  { address: '0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3', decimals: 18 }
+    }
+  }
+
+  const toDisplay = (units: string, decimals: number) => {
+    if (!units) return '0.0000'
+    const neg = units.startsWith('-')
+    const s = neg ? units.slice(1) : units
+    const pad = s.padStart(decimals + 1, '0')
+    const head = pad.slice(0, pad.length - decimals)
+    const tail = pad.slice(pad.length - decimals)
+    const num = `${neg ? '-' : ''}${head}.${tail}`
+    const n = parseFloat(num)
+    if (Number.isNaN(n)) return '0.0000'
+    return n.toFixed(4)
+  }
+
+  const fetchStablecoinBalances = async (walletList: Wallet[]) => {
+    const balancesMap: Record<string, Record<string, string>> = {}
+    const etherscanKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || process.env.ETHERSCAN_API_KEY
     for (const w of walletList) {
-      result.push(w)
       const net = (w.network || '').toLowerCase()
-      if (supportsErc20Tokens(net)) {
-        ;['USDC','USDT','DAI'].forEach(sym => {
-          if ((w.currency || '').toUpperCase() !== sym) {
-            result.push({ ...w, id: `${w.id}-${sym}`, currency: sym })
+      balancesMap[w.id] = {}
+      try {
+        if (supportsErc20Tokens(net)) {
+          const cid = chainIds[net]
+          const baseUrl = 'https://api.etherscan.io/v2/api'
+          for (const sym of ['USDC','USDT','DAI']) {
+            const token = tokenRegistry[net]?.[sym]
+            if (!token) continue
+            const url = `${baseUrl}?chainid=${cid}&module=account&action=tokenbalance&address=${w.address}&contractaddress=${token.address}&tag=latest${etherscanKey ? `&apikey=${etherscanKey}` : ''}`
+            const r = await fetch(url, { cache: 'no-store' })
+            const j: any = await r.json().catch(() => null)
+            const units = j?.result || '0'
+            balancesMap[w.id][sym] = toDisplay(String(units), token.decimals)
           }
-        })
-      } else if (supportsSplTokens(net)) {
-        ;['USDC','USDT'].forEach(sym => {
-          if ((w.currency || '').toUpperCase() !== sym) {
-            result.push({ ...w, id: `${w.id}-${sym}`, currency: sym })
+        } else if (supportsSplTokens(net)) {
+          const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.SOLANA_RPC_URL || (process.env.NEXT_PUBLIC_HELIUS_API_KEY || process.env.HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY || process.env.HELIUS_API_KEY}` : 'https://api.mainnet-beta.solana.com')
+          const splMints: Record<string, { mint: string, decimals: number }> = {
+            USDC: { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
+            USDT: { mint: 'Es9vMFrzaCERG1bG1Nsx3Rp3XIanFkFJxux1kvZWS9G', decimals: 6 }
           }
-        })
+          for (const sym of ['USDC','USDT'] as const) {
+            const mint = splMints[sym]
+            const body = {
+              jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [w.address, { mint: mint.mint }, { encoding: 'jsonParsed' }]
+            }
+            const r = await fetch(rpc, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' })
+            const j: any = await r.json().catch(() => null)
+            const value: any[] = j?.result?.value || []
+            let sum = 0
+            for (const v of value) {
+              const amt = parseFloat(v?.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0)
+              sum += amt
+            }
+            balancesMap[w.id][sym] = (sum || 0).toFixed(4)
+          }
+        }
+      } catch (e) {
+        // ignore; balance stays undefined
       }
     }
-    return result
+    setTokenBalances(balancesMap)
   }
 
   const fetchCryptoLogos = (walletList: Wallet[]) => {
@@ -565,6 +647,16 @@ export default function VendorWallets() {
                               {balances[wallet.id] || '0.0000'} {wallet.currency}
                             </p>
                             <p className="text-sm text-gray-500">Balance</p>
+                            {/* Stablecoin balances (if any) */}
+                            {tokenBalances[wallet.id] && (
+                              <div className="mt-1 text-xs text-gray-600 space-y-0.5">
+                                {Object.entries(tokenBalances[wallet.id]).map(([sym, bal]) => (
+                                  <div key={`${wallet.id}-${sym}`} className="flex justify-end">
+                                    <span>{sym}: {bal}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           
                           <div className="flex items-center space-x-2">
