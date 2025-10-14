@@ -3,6 +3,18 @@ import { supabaseAdmin } from '../../../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../../../lib/auth-middleware';
 import { getTokenInfo, toBaseUnits } from '../../../../lib/tokens'
 
+// Simple process-local throttle for Solana RPC to respect ~10 rps limits
+let lastSolanaRpcAt = 0
+const MIN_SOLANA_RPC_INTERVAL_MS = 120 // ~8.3 rps max
+async function throttleSolanaRpc() {
+  const now = Date.now()
+  const waitMs = Math.max(0, MIN_SOLANA_RPC_INTERVAL_MS - (now - lastSolanaRpcAt))
+  if (waitMs > 0) {
+    await new Promise((r) => setTimeout(r, waitMs))
+  }
+  lastSolanaRpcAt = Date.now()
+}
+
 // Chain monitoring endpoint to check for completed payments
 // This would typically be called by a background job or cron service
 // For now, we'll create a simple endpoint that can be called manually
@@ -118,18 +130,20 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         const heliusKey = process.env.HELIUS_API_KEY
         const solRpc = process.env.SOLANA_RPC_URL || (heliusKey ? `https://mainnet.helius-rpc.com/?api-key=${heliusKey}` : 'https://api.mainnet-beta.solana.com')
         // Fetch recent signatures for the recipient address
+        await throttleSolanaRpc()
         const sigsRes = await fetch(solRpc, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store',
           body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [toAddress, { limit: 20 }]
+            jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [toAddress, { limit: 5 }]
           })
         })
         const sigsJson: any = await sigsRes.json().catch(() => null)
         const signatures: any[] = sigsJson?.result || []
         if (signatures.length > 0) {
           for (const s of signatures) {
+            await throttleSolanaRpc()
             const txRes = await fetch(solRpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
