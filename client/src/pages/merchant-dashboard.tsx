@@ -15,8 +15,10 @@ import {
   WalletIcon
 } from '@heroicons/react/24/outline'
 import RevenueChart from '../components/RevenueChart'
+import { useRouter } from 'next/router'
 
 export default function MerchantDashboard() {
+  const router = useRouter()
   const [merchantStats, setMerchantStats] = useState({
     totalRevenue: 0,
     totalTransactions: 0,
@@ -220,7 +222,7 @@ export default function MerchantDashboard() {
 
               {/* Revenue Chart */}
               <div className="mb-8">
-                <RevenueChart />
+                <RevenueChartWrapper />
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -339,4 +341,30 @@ export default function MerchantDashboard() {
       </div>
     </>
   )
+}
+
+function RevenueChartWrapper() {
+  const [chartData, setChartData] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('swiftpay_token')
+        if (!token) { setChartData(null); return }
+        const r = await fetch('/api/merchant/revenue?days=30', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        const j = await r.json()
+        if (j.success) setChartData(j.data)
+        else setChartData(null)
+      } catch { setChartData(null) }
+      finally { setLoading(false) }
+    }
+    fetchRevenue()
+  }, [])
+
+  if (loading) {
+    return <div className="bg-white rounded-lg shadow p-6 h-80 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
+  }
+  return <RevenueChart data={chartData} />
 }
