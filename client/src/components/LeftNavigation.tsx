@@ -52,7 +52,7 @@ export default function LeftNavigation() {
           name: 'Home',
           href: '/',
           icon: HomeIcon,
-          description: 'SwiftPay homepage'
+          description: 'SwiftSpace homepage'
         },
         {
           id: 'demo',
@@ -181,7 +181,7 @@ export default function LeftNavigation() {
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <Link href="/" className="text-xl font-bold text-indigo-600">
-              SwiftPay
+              {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}
             </Link>
           )}
           <button
@@ -268,7 +268,7 @@ export default function LeftNavigation() {
       {!isCollapsed && (
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 text-center">
-            <p>SwiftPay v1.0</p>
+            <p>{process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'} v1.0</p>
             <p className="mt-1">Crypto Payment Processor</p>
           </div>
         </div>

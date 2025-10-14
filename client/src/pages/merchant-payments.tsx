@@ -139,7 +139,7 @@ export default function MerchantPayments() {
   return (
     <>
       <Head>
-        <title>Merchant Payments - SwiftPay</title>
+        <title>Merchant Payments - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
         <meta name="description" content="Manage your merchant payments and withdrawals" />
       </Head>
 

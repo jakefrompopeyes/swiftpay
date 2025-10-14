@@ -242,8 +242,8 @@ window.location.href = '${checkout}'
   return (
     <>
       <Head>
-        <title>Merchant Integration Tools - SwiftPay</title>
-        <meta name="description" content="Tools for merchants to integrate SwiftPay payments" />
+        <title>Merchant Integration Tools - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
+        <meta name="description" content={`Tools for merchants to integrate ${(process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace')} payments`} />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -253,7 +253,7 @@ window.location.href = '${checkout}'
             <div className="flex justify-between h-16">
               <div className="flex items-center">
                 <Link href="/demo" className="text-2xl font-bold text-indigo-600">
-                  SwiftPay
+                  {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}
                 </Link>
                 <span className="ml-4 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
                   MERCHANT TOOLS
@@ -273,7 +273,7 @@ window.location.href = '${checkout}'
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Merchant Integration Tools</h1>
             <p className="mt-2 text-gray-600">
-              Choose how you want to integrate SwiftPay payments into your business
+              Choose how you want to integrate {(process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace')} payments into your business
             </p>
           </div>
 

@@ -53,8 +53,8 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Login - SwiftPay</title>
-        <meta name="description" content="Login to your SwiftPay account" />
+        <title>Login - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
+        <meta name="description" content={`Login to your ${(process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace')} account`} />
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

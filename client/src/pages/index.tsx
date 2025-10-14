@@ -22,7 +22,7 @@ export default function Home() {
   return (
     <Layout showNavigation={false}>
       <Head>
-        <title>SwiftPay - The Stripe for Crypto</title>
+        <title>{process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'} - The Stripe for Crypto</title>
         <meta name="description" content="Seamless cryptocurrency payments between individuals and vendors" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
@@ -35,7 +35,7 @@ export default function Home() {
             <div className="flex justify-between h-16">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <h1 className="text-2xl font-bold text-indigo-600">SwiftPay</h1>
+                  <h1 className="text-2xl font-bold text-indigo-600">{process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</h1>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -191,7 +191,7 @@ export default function Home() {
               <span className="block">Start accepting crypto payments today.</span>
             </h2>
             <p className="mt-4 text-lg leading-6 text-indigo-200">
-              Join thousands of vendors already using SwiftPay to accept cryptocurrency payments.
+              Join thousands of vendors already using {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'} to accept cryptocurrency payments.
             </p>
             <Link href="/demo" className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 sm:w-auto">
               Try demo for free
@@ -203,12 +203,12 @@ export default function Home() {
         <footer className="bg-white">
           <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900">SwiftPay</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</h3>
               <p className="mt-2 text-sm text-gray-500">
                 The Stripe for crypto - enabling seamless cryptocurrency payments.
               </p>
               <p className="mt-4 text-sm text-gray-400">
-                © 2024 SwiftPay. All rights reserved.
+                © 2024 {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}. All rights reserved.
               </p>
             </div>
           </div>

@@ -102,8 +102,8 @@ export default function MerchantDashboard() {
   return (
     <>
       <Head>
-        <title>Merchant Dashboard - SwiftPay</title>
-        <meta name="description" content="Manage your SwiftPay merchant account" />
+        <title>Merchant Dashboard - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
+        <meta name="description" content={`Manage your ${(process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace')} merchant account`} />
       </Head>
 
       <div className="min-h-screen bg-gray-50">

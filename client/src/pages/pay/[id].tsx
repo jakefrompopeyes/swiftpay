@@ -260,7 +260,7 @@ export default function PayRequest() {
   return (
     <>
       <Head>
-        <title>Payment Request - SwiftPay</title>
+        <title>Payment Request - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
         <meta name="description" content="Secure cryptocurrency payment" />
       </Head>
       

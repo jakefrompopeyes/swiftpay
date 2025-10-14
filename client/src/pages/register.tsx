@@ -61,8 +61,8 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>Register - SwiftPay</title>
-        <meta name="description" content="Create your SwiftPay account" />
+        <title>Register - {process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace'}</title>
+        <meta name="description" content={`Create your ${(process.env.NEXT_PUBLIC_SITE_NAME || 'SwiftSpace')} account`} />
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

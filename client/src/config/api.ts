@@ -1,6 +1,6 @@
-// API Configuration for SwiftPay
+// API Configuration for SwiftSpace
 export const API_CONFIG = {
-  // SwiftPay Backend API Configuration
+  // SwiftSpace Backend API Configuration
   BACKEND: {
     // Use Vercel Functions (same domain as frontend)
     BASE_URL: '',
