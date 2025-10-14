@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../../../lib/auth-middleware';
+import { getTokenInfo, toBaseUnits } from '../../../../lib/tokens'
 
 // Chain monitoring endpoint to check for completed payments
 // This would typically be called by a background job or cron service
@@ -48,65 +49,167 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // In a real implementation, you would:
-      // 1. Query the blockchain for transactions to the payment address
-      // 2. Check if the transaction amount matches the expected amount
-      // 3. Verify the transaction is confirmed (enough blocks)
-      // 4. Update the payment status
+      // Real on-chain check
+      const network = String(payment.network || '').toLowerCase()
+      const currency = String(payment.currency || '').toUpperCase()
+      const toAddress = String(payment.to_address)
+      const amount = Number(payment.amount)
 
-      // For now, we'll simulate a successful payment check
-      // This is where you'd integrate with:
-      // - Etherscan API for Ethereum/Arbitrum/Base/Polygon
-      // - Solscan API for Solana
-      // - BSCScan API for BNB Chain
-      // - Or use a service like Alchemy, Infura, Moralis, etc.
+      const isEvm = ['ethereum', 'arbitrum', 'polygon', 'base', 'binance'].includes(network)
+      const isSolana = network === 'solana'
 
-      const simulatedSuccess = Math.random() > 0.3; // 70% success rate for demo
+      let foundTxHash: string | null = null
 
-      if (simulatedSuccess) {
-        // Simulate finding a matching transaction
-        const mockTransactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-        
-        const { data: updatedPayment, error: updateError } = await supabaseAdmin
-          .from('payment_requests')
-          .update({
-            status: 'completed',
-            transaction_hash: mockTransactionHash,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentId)
-          .select('id, status, transaction_hash')
-          .single();
+      if (isEvm) {
+        const baseUrls: Record<string, string> = {
+          ethereum: 'https://api.etherscan.io',
+          arbitrum: 'https://api.arbiscan.io',
+          polygon: 'https://api.polygonscan.com',
+          base: 'https://api.basescan.org',
+          binance: 'https://api.bscscan.com'
+        }
+        const apiKeys: Record<string, string | undefined> = {
+          ethereum: process.env.ETHERSCAN_API_KEY,
+          arbitrum: process.env.ARBISCAN_API_KEY || process.env.ARBITRUM_API_KEY,
+          polygon: process.env.POLYGONSCAN_API_KEY,
+          base: process.env.BASESCAN_API_KEY,
+          binance: process.env.BSCSCAN_API_KEY
+        }
+        const baseUrl = baseUrls[network]
+        const apiKey = apiKeys[network]
 
-        if (updateError) {
-          console.error('Error updating payment status:', updateError);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Failed to update payment status' 
-          });
+        const token = getTokenInfo(network, currency)
+        const minConfirmations = 5
+
+        // Helper to fetch JSON with no-store
+        const fetchJson = async (url: string) => {
+          const r = await fetch(url, { cache: 'no-store' })
+          if (!r.ok) return null
+          try { return await r.json() } catch { return null }
         }
 
-        console.log(`Payment ${paymentId} marked as completed`, {
-          transactionHash: mockTransactionHash,
-          merchantId: payment.user_id
-        });
+        if (token && token.standard === 'erc20') {
+          const units = toBaseUnits(amount, token.decimals)
+          const url = `${baseUrl}/api?module=account&action=tokentx&address=${toAddress}&contractaddress=${token.address}&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
+          const json: any = await fetchJson(url)
+          const txs: any[] = json?.result || []
+          const match = txs.find((tx: any) => {
+            const toOk = String(tx.to).toLowerCase() === toAddress.toLowerCase()
+            const valueOk = String(tx.value) === units
+            const confOk = parseInt(tx.confirmations || '0', 10) >= minConfirmations
+            return toOk && valueOk && confOk
+          })
+          if (match) foundTxHash = match.hash
+        } else {
+          // Native coin (ETH/BNB/MATIC, etc.)
+          const wei = toBaseUnits(amount, 18)
+          const url = `${baseUrl}/api?module=account&action=txlist&address=${toAddress}&startblock=0&endblock=99999999&sort=desc${apiKey ? `&apikey=${apiKey}` : ''}`
+          const json: any = await fetchJson(url)
+          const txs: any[] = json?.result || []
+          const match = txs.find((tx: any) => {
+            const toOk = String(tx.to).toLowerCase() === toAddress.toLowerCase()
+            const valueOk = String(tx.value) === wei
+            const successOk = tx.isError === '0'
+            const confOk = parseInt(tx.confirmations || '0', 10) >= minConfirmations
+            return toOk && valueOk && successOk && confOk
+          })
+          if (match) foundTxHash = match.hash
+        }
+      } else if (isSolana) {
+        // Prefer Helius if available; else use public RPC
+        const heliusKey = process.env.HELIUS_API_KEY
+        const solRpc = process.env.SOLANA_RPC_URL || (heliusKey ? `https://mainnet.helius-rpc.com/?api-key=${heliusKey}` : 'https://api.mainnet-beta.solana.com')
+        // Fetch recent signatures for the recipient address
+        const sigsRes = await fetch(solRpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [toAddress, { limit: 20 }]
+          })
+        })
+        const sigsJson: any = await sigsRes.json().catch(() => null)
+        const signatures: any[] = sigsJson?.result || []
+        if (signatures.length > 0) {
+          for (const s of signatures) {
+            const txRes = await fetch(solRpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              cache: 'no-store',
+              body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [s.signature, { maxSupportedTransactionVersion: 0 }] })
+            })
+            const txJson: any = await txRes.json().catch(() => null)
+            const tx = txJson?.result
+            if (!tx) continue
+            const err = tx?.meta?.err
+            if (err) continue
 
-        return res.json({
-          success: true,
-          message: 'Payment confirmed on chain',
-          data: {
-            paymentId: updatedPayment.id,
-            status: updatedPayment.status,
-            transactionHash: updatedPayment.transaction_hash
+            // Native SOL transfer: check postBalances-preBalances for recipient
+            const token = getTokenInfo('solana', currency)
+            if (!token) {
+              // SOL
+              const accountKeys: string[] = (tx.transaction?.message?.accountKeys || []).map((k: any) => (typeof k === 'string' ? k : k.pubkey))
+              const idx = accountKeys.findIndex((a) => String(a) === toAddress)
+              if (idx >= 0) {
+                const pre = Number(tx.meta?.preBalances?.[idx] || 0)
+                const post = Number(tx.meta?.postBalances?.[idx] || 0)
+                const diffLamports = post - pre
+                const expected = Number(toBaseUnits(amount, 9)) // 9 decimals for SOL
+                if (diffLamports === expected) {
+                  foundTxHash = s.signature
+                  break
+                }
+              }
+            } else {
+              // SPL token transfer: inspect tokenBalances delta
+              const postTokenBalances: any[] = tx.meta?.postTokenBalances || []
+              const match = postTokenBalances.find((b: any) => {
+                const ownerOk = String(b.owner) === toAddress
+                const mintOk = String(b.mint) === token.address
+                return ownerOk && mintOk
+              })
+              if (match) {
+                // We have a token balance; compute diff with preTokenBalances
+                const preTokenBalances: any[] = tx.meta?.preTokenBalances || []
+                const pre = preTokenBalances.find((b: any) => String(b.owner) === toAddress && String(b.mint) === token.address)
+                const preUi = pre ? Number(pre.uiTokenAmount.uiAmount) : 0
+                const postUi = Number(match.uiTokenAmount.uiAmount)
+                const delta = postUi - preUi
+                if (Math.abs(delta - amount) < 1e-6) {
+                  foundTxHash = s.signature
+                  break
+                }
+              }
+            }
           }
-        });
-      } else {
-        return res.json({
-          success: true,
-          message: 'No matching transaction found',
-          data: { status: 'pending' }
-        });
+        }
       }
+
+      if (!foundTxHash) {
+        return res.json({ success: true, message: 'No matching transaction found', data: { status: 'pending' } })
+      }
+
+      const { data: updatedPayment, error: updateError } = await supabaseAdmin
+        .from('payment_requests')
+        .update({
+          status: 'completed',
+          transaction_hash: foundTxHash,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentId)
+        .select('id, status, transaction_hash')
+        .single();
+
+      if (updateError) {
+        console.error('Error updating payment status:', updateError);
+        return res.status(500).json({ success: false, error: 'Failed to update payment status' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Payment confirmed on chain',
+        data: { paymentId: updatedPayment.id, status: updatedPayment.status, transactionHash: updatedPayment.transaction_hash }
+      })
 
     } catch (error: any) {
       console.error('Chain monitoring error:', error);
