@@ -28,43 +28,7 @@ export default function MerchantDashboard() {
 
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
 
-  const [integrationMethods] = useState([
-    {
-      name: 'Payment Button',
-      description: 'Add crypto payment buttons to your website',
-      icon: '🔘',
-      status: 'active',
-      usage: 'High'
-    },
-    {
-      name: 'Direct Links',
-      description: 'Share payment links via email or SMS',
-      icon: '🔗',
-      status: 'active',
-      usage: 'Medium'
-    },
-    {
-      name: 'QR Codes',
-      description: 'Generate QR codes for in-person payments',
-      icon: '📱',
-      status: 'active',
-      usage: 'High'
-    },
-    {
-      name: 'API Integration',
-      description: 'Integrate payments into your application',
-      icon: '⚙️',
-      status: 'setup',
-      usage: 'Low'
-    },
-    {
-      name: 'Embedded Checkout',
-      description: 'Embed full checkout in your website',
-      icon: '📦',
-      status: 'setup',
-      usage: 'Low'
-    }
-  ])
+  // Removed mock Integration Methods list
 
   useEffect(() => {
     const fetchMerchantData = async () => {
@@ -181,12 +145,10 @@ export default function MerchantDashboard() {
             </div>
           ) : (
             <>
-              {/* Welcome */}
+              {/* Title */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Welcome back, Demo Merchant!</h1>
-                <p className="mt-2 text-gray-600">
-                  Manage your crypto payment integrations and track your business performance
-                </p>
+                <h1 className="text-3xl font-bold text-gray-900">Merchant Dashboard</h1>
+                <p className="mt-2 text-gray-600">Track revenue and recent payments in real time</p>
               </div>
 
               {/* Stats */}
@@ -262,48 +224,12 @@ export default function MerchantDashboard() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Integration Methods */}
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">Integration Methods</h3>
-                      <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                        Manage →
-                      </Link>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {integrationMethods.map((method, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center">
-                            <span className="text-lg mr-3">{method.icon}</span>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{method.name}</p>
-                              <p className="text-xs text-gray-500">{method.description}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              method.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {method.status}
-                            </span>
-                            <p className="text-xs text-gray-500 mt-1">{method.usage} usage</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Recent Transactions */}
                 <div className="bg-white shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
-                      <Link href="/transactions" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                        View all →
-                      </Link>
+                      {/* Removed link to transactions page (deleted) */}
                     </div>
                     
                     <div className="space-y-3">
