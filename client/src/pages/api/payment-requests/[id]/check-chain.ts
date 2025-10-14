@@ -55,7 +55,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       const toAddress = String(payment.to_address)
       const amount = Number(payment.amount)
 
-      const isEvm = ['ethereum', 'arbitrum', 'polygon', 'base', 'binance'].includes(network)
+      const isEvm = ['ethereum', 'arbitrum', 'polygon', 'base', 'binance', 'optimism', 'avalanche', 'fantom'].includes(network)
       const isSolana = network === 'solana'
 
       let foundTxHash: string | null = null
@@ -68,7 +68,10 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           arbitrum: 42161,
           polygon: 137,
           base: 8453,
-          binance: 56
+          binance: 56,
+          optimism: 10,
+          avalanche: 43114,
+          fantom: 250
         }
         const chainId = chainIds[network]
         const apiKey = process.env.ETHERSCAN_API_KEY
