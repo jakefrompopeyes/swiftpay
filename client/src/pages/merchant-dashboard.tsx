@@ -23,36 +23,10 @@ export default function MerchantDashboard() {
     activeCustomers: 0,
     conversionRate: 0
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [recentTransactions, setRecentTransactions] = useState([
-    {
-      id: 'tx-001',
-      amount: 25.50,
-      currency: 'USDC',
-      customer: 'john@example.com',
-      status: 'completed',
-      timestamp: '2024-01-15T10:30:00Z',
-      description: 'Coffee Order'
-    },
-    {
-      id: 'tx-002',
-      amount: 150.00,
-      currency: 'ETH',
-      customer: 'sarah@example.com',
-      status: 'completed',
-      timestamp: '2024-01-15T09:15:00Z',
-      description: 'Consulting Service'
-    },
-    {
-      id: 'tx-003',
-      amount: 75.25,
-      currency: 'BTC',
-      customer: 'mike@example.com',
-      status: 'pending',
-      timestamp: '2024-01-15T08:45:00Z',
-      description: 'Product Purchase'
-    }
-  ])
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([])
 
   const [integrationMethods] = useState([
     {
@@ -93,13 +67,37 @@ export default function MerchantDashboard() {
   ])
 
   useEffect(() => {
-    // Simulate loading merchant data
-    setMerchantStats({
-      totalRevenue: 2847.50,
-      totalTransactions: 47,
-      activeCustomers: 23,
-      conversionRate: 78.5
-    })
+    const fetchMerchantData = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('swiftpay_token')
+        if (!token) {
+          setError('Please log in to view merchant data')
+          return
+        }
+
+        const response = await fetch('/api/merchant/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        const result = await response.json()
+        if (result.success) {
+          setMerchantStats(result.data.stats)
+          setRecentTransactions(result.data.recentTransactions)
+        } else {
+          setError(result.error || 'Failed to load merchant data')
+        }
+      } catch (err) {
+        console.error('Error fetching merchant data:', err)
+        setError('Failed to load merchant data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMerchantData()
   }, [])
 
   const formatCurrency = (amount: number) => {
@@ -109,13 +107,21 @@ export default function MerchantDashboard() {
     }).format(amount)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const getCurrencyIcon = (currency: string) => {
+    const icons: Record<string, string> = {
+      'BTC': '🟠',
+      'ETH': '🔷',
+      'USDC': '🔵',
+      'USDT': '🟢',
+      'DAI': '🟡',
+      'LINK': '🔵',
+      'UNI': '🟣',
+      'ARB': '🔵',
+      'SOL': '🟣',
+      'BNB': '🟡',
+      'MATIC': '🟣'
+    }
+    return icons[currency] || '💰'
   }
 
   return (
@@ -145,6 +151,27 @@ export default function MerchantDashboard() {
         </div>
 
         <div className="px-4 sm:px-6 lg:px-8 py-6">
+          {loading ? (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading merchant data...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <p className="text-red-600 font-medium mb-2">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Welcome */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Welcome back, Demo Merchant!</h1>
@@ -271,14 +298,12 @@ export default function MerchantDashboard() {
                 </div>
                 
                 <div className="space-y-3">
-                  {recentTransactions.map((transaction) => (
+                  {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
                     <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
                           <span className="text-xs font-medium text-gray-600">
-                            {transaction.currency === 'BTC' ? '🟠' : 
-                             transaction.currency === 'ETH' ? '🔷' : 
-                             transaction.currency === 'USDC' ? '🔵' : '💰'}
+                            {getCurrencyIcon(transaction.currency)}
                           </span>
                         </div>
                         <div>
@@ -288,7 +313,7 @@ export default function MerchantDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(transaction.amount)}
+                          {formatCurrency(transaction.amount)} {transaction.currency}
                         </p>
                         <div className="flex items-center">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -300,7 +325,14 @@ export default function MerchantDashboard() {
                         <p className="text-xs text-gray-500">{formatDate(transaction.timestamp)}</p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No transactions yet</p>
+                      <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm">
+                        Create your first payment →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -365,7 +397,8 @@ export default function MerchantDashboard() {
                 </div>
               </div>
             </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </>
