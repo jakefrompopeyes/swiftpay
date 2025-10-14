@@ -345,26 +345,72 @@ export default function MerchantDashboard() {
 
 function RevenueChartWrapper() {
   const [chartData, setChartData] = useState<any | null>(null)
+  const [meta, setMeta] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState<number>(30)
+
+  const load = async (d: number) => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('swiftpay_token')
+      if (!token) { setChartData(null); setMeta(null); return }
+      const r = await fetch(`/api/merchant/revenue?days=${d}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      const j = await r.json()
+      if (j.success) { setChartData(j.data); setMeta(j.data?.meta || null) }
+      else { setChartData(null); setMeta(null) }
+    } catch { setChartData(null); setMeta(null) }
+    finally { setLoading(false) }
+  }
 
   useEffect(() => {
-    const fetchRevenue = async () => {
-      try {
-        setLoading(true)
-        const token = localStorage.getItem('swiftpay_token')
-        if (!token) { setChartData(null); return }
-        const r = await fetch('/api/merchant/revenue?days=30', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-        const j = await r.json()
-        if (j.success) setChartData(j.data)
-        else setChartData(null)
-      } catch { setChartData(null) }
-      finally { setLoading(false) }
-    }
-    fetchRevenue()
-  }, [])
+    load(days)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days])
 
   if (loading) {
     return <div className="bg-white rounded-lg shadow p-6 h-80 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
   }
-  return <RevenueChart data={chartData} />
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-gray-600">Revenue</div>
+        <div className="space-x-2">
+          {[7,14,30,60].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={`px-2 py-1 text-xs rounded-md border ${days===d ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+      </div>
+      <RevenueChart data={chartData} />
+      {/* Buckets & WoW Summary */}
+      {meta && (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="p-3 rounded-lg bg-indigo-50">
+            <div className="text-xs text-indigo-700">Completed</div>
+            <div className="text-lg font-semibold text-indigo-900">${meta.summary.totalCompletedUsd.toFixed(2)}</div>
+          </div>
+          <div className="p-3 rounded-lg bg-yellow-50">
+            <div className="text-xs text-yellow-700">Pending</div>
+            <div className="text-lg font-semibold text-yellow-900">${meta.summary.totalPendingUsd.toFixed(2)}</div>
+          </div>
+          <div className="p-3 rounded-lg bg-red-50">
+            <div className="text-xs text-red-700">Underpaid</div>
+            <div className="text-lg font-semibold text-red-900">${meta.summary.totalUnderpaidUsd.toFixed(2)}</div>
+          </div>
+          <div className={`p-3 rounded-lg ${meta.summary.wow.pct >= 0 ? 'bg-green-50' : 'bg-rose-50'}`}>
+            <div className={`text-xs ${meta.summary.wow.pct >= 0 ? 'text-green-700' : 'text-rose-700'}`}>WoW (last 7d vs prev 7d)</div>
+            <div className={`text-lg font-semibold ${meta.summary.wow.pct >= 0 ? 'text-green-900' : 'text-rose-900'}`}>
+              {meta.summary.wow.pct.toFixed(2)}%
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
