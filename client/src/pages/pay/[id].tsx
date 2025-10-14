@@ -260,13 +260,13 @@ export default function PayRequest() {
                   
                   <div className="space-y-3">
                     {(options?.wallets || []).map((wallet) => {
-                      const isSelected = selectedWallet?.id === wallet.id
+                      const isSelected = selectedWallet?.id === wallet.id && selectedWallet?.currency === wallet.currency
                       const logoUrl = cryptoLogoService.getLogoUrl(wallet.currency)
                       const hasLogo = cryptoLogoService.hasLogoUrl(wallet.currency)
                       
                       return (
                         <div
-                          key={wallet.id}
+                          key={`${wallet.id}-${wallet.currency}`}
                           className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
                             isSelected
                               ? 'border-indigo-500 bg-indigo-50 shadow-md'

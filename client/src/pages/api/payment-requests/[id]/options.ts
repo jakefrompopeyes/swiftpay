@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../../lib/supabase-server'
+import { isTokenSupported } from '../../../../lib/tokens'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -51,12 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const net = (w.network || '').toLowerCase()
       const candidates = ['USDC','USDT','DAI']
       const extras = candidates
-        .filter(sym => ['ethereum','polygon','base','arbitrum','binance','solana'].includes(net))
-        .filter(sym => {
-          // Only include token currencies different from the native coin for this wallet
-          return true
-        })
-        .map(sym => ({ ...w, currency: sym }))
+        .filter(sym => isTokenSupported(net, sym))
+        .filter(sym => (w.currency || '').toUpperCase() !== sym)
+        .map(sym => ({ ...w, id: `${w.id}-${sym}`, currency: sym }))
       return [...base, ...extras]
     })
 
