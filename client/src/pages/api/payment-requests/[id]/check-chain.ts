@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabase-server';
-import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware';
+import { supabaseAdmin } from '../../../../lib/supabase-server';
+import { authenticateToken, AuthRequest } from '../../../../lib/auth-middleware';
 
 // Chain monitoring endpoint to check for completed payments
 // This would typically be called by a background job or cron service
