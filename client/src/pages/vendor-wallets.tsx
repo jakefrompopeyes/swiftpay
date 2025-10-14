@@ -93,11 +93,13 @@ export default function VendorWallets() {
       setIsLoading(true)
       const response = await backendAPI.wallets.getWallets()
       if (response.success) {
-        setWallets(response.data)
-        // Fetch balances for each wallet
-        await fetchAllBalances(response.data)
-        // Fetch logos for each wallet
-        fetchCryptoLogos(response.data)
+        const baseWallets: Wallet[] = response.data
+        const expanded = expandStablecoinVariants(baseWallets)
+        setWallets(expanded)
+        // Fetch balances for each base wallet (avoid synthetic token ids)
+        await fetchAllBalances(baseWallets)
+        // Fetch logos for each displayed currency (includes tokens)
+        fetchCryptoLogos(expanded)
       } else {
         toast.error('Failed to fetch wallets')
       }
@@ -107,6 +109,31 @@ export default function VendorWallets() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const supportsErc20Tokens = (network: string) => ['ethereum','polygon','base','arbitrum','binance'].includes((network || '').toLowerCase())
+  const supportsSplTokens = (network: string) => (network || '').toLowerCase() === 'solana'
+
+  const expandStablecoinVariants = (walletList: Wallet[]): Wallet[] => {
+    const result: Wallet[] = []
+    for (const w of walletList) {
+      result.push(w)
+      const net = (w.network || '').toLowerCase()
+      if (supportsErc20Tokens(net)) {
+        ;['USDC','USDT','DAI'].forEach(sym => {
+          if ((w.currency || '').toUpperCase() !== sym) {
+            result.push({ ...w, id: `${w.id}-${sym}`, currency: sym })
+          }
+        })
+      } else if (supportsSplTokens(net)) {
+        ;['USDC','USDT'].forEach(sym => {
+          if ((w.currency || '').toUpperCase() !== sym) {
+            result.push({ ...w, id: `${w.id}-${sym}`, currency: sym })
+          }
+        })
+      }
+    }
+    return result
   }
 
   const fetchCryptoLogos = (walletList: Wallet[]) => {
@@ -296,7 +323,8 @@ export default function VendorWallets() {
       'BNB': '🟡',
       'MATIC': '🟣',
       'USDC': '🔵',
-      'USDT': '🟢'
+      'USDT': '🟢',
+      'DAI': '🟡'
     }
     return iconMap[currency.toUpperCase()] || '🔷'
   }
@@ -325,7 +353,8 @@ export default function VendorWallets() {
       'BNB': 'BNB',
       'MATIC': 'Polygon',
       'USDC': 'USD Coin',
-      'USDT': 'Tether'
+      'USDT': 'Tether',
+      'DAI': 'Dai Stablecoin'
     }
     return nameMap[currency.toUpperCase()] || getNetworkName(network)
   }
