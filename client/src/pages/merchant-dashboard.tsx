@@ -107,6 +107,15 @@ export default function MerchantDashboard() {
     }).format(amount)
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   const getCurrencyIcon = (currency: string) => {
     const icons: Record<string, string> = {
       'BTC': '🟠',
@@ -172,231 +181,232 @@ export default function MerchantDashboard() {
             </div>
           ) : (
             <>
-          {/* Welcome */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Welcome back, Demo Merchant!</h1>
-            <p className="mt-2 text-gray-600">
-              Manage your crypto payment integrations and track your business performance
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <CurrencyDollarIcon className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                      <dd className="text-lg font-medium text-gray-900">{formatCurrency(merchantStats.totalRevenue)}</dd>
-                    </dl>
-                  </div>
-                </div>
+              {/* Welcome */}
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">Welcome back, Demo Merchant!</h1>
+                <p className="mt-2 text-gray-600">
+                  Manage your crypto payment integrations and track your business performance
+                </p>
               </div>
-            </div>
 
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ChartBarIcon className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Transactions</dt>
-                      <dd className="text-lg font-medium text-gray-900">{merchantStats.totalTransactions}</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <UsersIcon className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Customers</dt>
-                      <dd className="text-lg font-medium text-gray-900">{merchantStats.activeCustomers}</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ChartBarIcon className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Conversion Rate</dt>
-                      <dd className="text-lg font-medium text-gray-900">{merchantStats.conversionRate}%</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Chart */}
-          <div className="mb-8">
-            <RevenueChart />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Integration Methods */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Integration Methods</h3>
-                  <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                    Manage →
-                  </Link>
-                </div>
-                
-                <div className="space-y-3">
-                  {integrationMethods.map((method, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center">
-                        <span className="text-lg mr-3">{method.icon}</span>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{method.name}</p>
-                          <p className="text-xs text-gray-500">{method.description}</p>
-                        </div>
+              {/* Stats */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <CurrencyDollarIcon className="h-6 w-6 text-gray-400" />
                       </div>
-                      <div className="text-right">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          method.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {method.status}
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">{method.usage} usage</p>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
+                          <dd className="text-lg font-medium text-gray-900">{formatCurrency(merchantStats.totalRevenue)}</dd>
+                        </dl>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Recent Transactions */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
-                  <Link href="/transactions" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                    View all →
-                  </Link>
-                </div>
-                
-                <div className="space-y-3">
-                  {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-xs font-medium text-gray-600">
-                            {getCurrencyIcon(transaction.currency)}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{transaction.description}</p>
-                          <p className="text-xs text-gray-500">{transaction.customer}</p>
-                        </div>
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <ChartBarIcon className="h-6 w-6 text-gray-400" />
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(transaction.amount)} {transaction.currency}
-                        </p>
-                        <div className="flex items-center">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {transaction.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">{formatDate(transaction.timestamp)}</p>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Transactions</dt>
+                          <dd className="text-lg font-medium text-gray-900">{merchantStats.totalTransactions}</dd>
+                        </dl>
                       </div>
                     </div>
-                  )) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No transactions yet</p>
-                      <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm">
-                        Create your first payment →
+                  </div>
+                </div>
+
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <UsersIcon className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Customers</dt>
+                          <dd className="text-lg font-medium text-gray-900">{merchantStats.activeCustomers}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <ChartBarIcon className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">Conversion Rate</dt>
+                          <dd className="text-lg font-medium text-gray-900">{merchantStats.conversionRate}%</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Revenue Chart */}
+              <div className="mb-8">
+                <RevenueChart />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Integration Methods */}
+                <div className="bg-white shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">Integration Methods</h3>
+                      <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                        Manage →
                       </Link>
                     </div>
-                  )}
+                    
+                    <div className="space-y-3">
+                      {integrationMethods.map((method, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center">
+                            <span className="text-lg mr-3">{method.icon}</span>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{method.name}</p>
+                              <p className="text-xs text-gray-500">{method.description}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              method.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {method.status}
+                            </span>
+                            <p className="text-xs text-gray-500 mt-1">{method.usage} usage</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="mt-6 bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
-              
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Link href="/merchant-tools" className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
-                  <CodeBracketIcon className="h-5 w-5 mr-2" />
-                  Integration Tools
-                </Link>
-                
-                <Link href="/checkout-generator" className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
-                  <ShareIcon className="h-5 w-5 mr-2" />
-                  Create Payment Link
-                </Link>
-                
-                <Link href="/merchant-payments" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
-                  <CurrencyDollarIcon className="h-5 w-5 mr-2" />
-                  Access Funds
-                </Link>
-                
-                <Link href="/vendor-wallets" className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
-                  <WalletIcon className="h-5 w-5 mr-2" />
-                  Manage Wallets
-                </Link>
-                
-                <button className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
-                  <CogIcon className="h-5 w-5 mr-2" />
-                  Settings
-                </button>
+                {/* Recent Transactions */}
+                <div className="bg-white shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
+                      <Link href="/transactions" className="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                        View all →
+                      </Link>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-xs font-medium text-gray-600">
+                                {getCurrencyIcon(transaction.currency)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{transaction.description}</p>
+                              <p className="text-xs text-gray-500">{transaction.customer}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatCurrency(transaction.amount)} {transaction.currency}
+                            </p>
+                            <div className="flex items-center">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {transaction.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500">{formatDate(transaction.timestamp)}</p>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No transactions yet</p>
+                          <Link href="/merchant-tools" className="text-indigo-600 hover:text-indigo-500 text-sm">
+                            Create your first payment →
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Getting Started */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <DocumentTextIcon className="h-5 w-5 text-blue-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Getting Started with SwiftPay
-                </h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Choose your integration method from the tools above</li>
-                    <li>Generate payment buttons, links, or QR codes</li>
-                    <li>Test payments in our sandbox environment</li>
-                    <li>Go live and start accepting crypto payments!</li>
-                  </ol>
+              {/* Quick Actions */}
+              <div className="mt-6 bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+                  
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <Link href="/merchant-tools" className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
+                      <CodeBracketIcon className="h-5 w-5 mr-2" />
+                      Integration Tools
+                    </Link>
+                    
+                    <Link href="/checkout-generator" className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
+                      <ShareIcon className="h-5 w-5 mr-2" />
+                      Create Payment Link
+                    </Link>
+                    
+                    <Link href="/merchant-payments" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
+                      <CurrencyDollarIcon className="h-5 w-5 mr-2" />
+                      Access Funds
+                    </Link>
+                    
+                    <Link href="/vendor-wallets" className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
+                      <WalletIcon className="h-5 w-5 mr-2" />
+                      Manage Wallets
+                    </Link>
+                    
+                    <button className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-md text-center transition-colors duration-200 flex items-center justify-center">
+                      <CogIcon className="h-5 w-5 mr-2" />
+                      Settings
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4">
-                  <Link href="/merchant-tools" className="text-blue-800 hover:text-blue-900 font-medium">
-                    Start integrating →
-                  </Link>
+              </div>
+
+              {/* Getting Started */}
+              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <DocumentTextIcon className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Getting Started with SwiftPay
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Choose your integration method from the tools above</li>
+                        <li>Generate payment buttons, links, or QR codes</li>
+                        <li>Test payments in our sandbox environment</li>
+                        <li>Go live and start accepting crypto payments!</li>
+                      </ol>
+                    </div>
+                    <div className="mt-4">
+                      <Link href="/merchant-tools" className="text-blue-800 hover:text-blue-900 font-medium">
+                        Start integrating →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
             </>
           )}
         </div>
