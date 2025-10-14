@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../lib/supabase-server';
-import { authenticateToken, AuthRequest } from '../../lib/auth-middleware';
-import { getTokenAddress } from '../../lib/conversion-tokens';
+import { supabaseAdmin } from '../../../lib/supabase-server';
+import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware';
+import { getTokenAddress } from '../../../lib/conversion-tokens';
 
 // Execute conversion transaction
 export default function handler(req: AuthRequest, res: NextApiResponse) {
