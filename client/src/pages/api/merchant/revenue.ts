@@ -118,6 +118,22 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         }
       }
 
+      // Optional CSV export
+      const format = String(req.query.format || '').toLowerCase()
+      if (format === 'csv') {
+        const header = 'date,completed_usd,pending_usd,underpaid_usd\n'
+        const lines = labels.map((label, idx) => {
+          const c = completed[idx] || 0
+          const p = pending[idx] || 0
+          const u = underpaid[idx] || 0
+          return `${label},${c.toFixed(2)},${p.toFixed(2)},${u.toFixed(2)}`
+        })
+        const csv = header + lines.join('\n')
+        res.setHeader('Content-Type', 'text/csv')
+        res.setHeader('Content-Disposition', `attachment; filename="revenue_${days}d.csv"`)
+        return res.status(200).send(csv)
+      }
+
       res.json({ success: true, data: chartData })
     } catch (err) {
       // eslint-disable-next-line no-console

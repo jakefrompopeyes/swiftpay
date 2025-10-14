@@ -376,6 +376,12 @@ function RevenueChartWrapper() {
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-gray-600">Revenue</div>
         <div className="space-x-2">
+          <a
+            href={`/api/merchant/revenue?days=${days}&format=csv`}
+            className="px-2 py-1 text-xs rounded-md border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          >
+            Export CSV
+          </a>
           {[7,14,30,60].map((d) => (
             <button
               key={d}
