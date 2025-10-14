@@ -14,6 +14,8 @@ const COINGECKO_IDS: Record<string, string> = {
   SOL: 'solana',
   DOT: 'polkadot',
   LINK: 'chainlink',
+  UNI: 'uniswap',
+  ARB: 'arbitrum',
   // Use the correct CoinGecko ID for MATIC (gas token on Polygon PoS)
   MATIC: 'matic-network',
   // Support POL (new Polygon token) in case we ever need it

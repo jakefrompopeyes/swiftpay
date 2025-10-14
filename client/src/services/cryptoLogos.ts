@@ -15,7 +15,9 @@ class CryptoLogoService {
     'DAI': 'https://assets.coingecko.com/coins/images/9956/small/4943.png?1696502774',
     'ADA': 'https://assets.coingecko.com/coins/images/975/small/cardano.png?1696502090',
     'DOT': 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png?1696512008',
-    'LINK': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png?1696502009'
+    'LINK': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png?1696502009',
+    'UNI': 'https://assets.coingecko.com/coins/images/12504/small/uni.jpg?1696512318',
+    'ARB': 'https://assets.coingecko.com/coins/images/16547/small/arbitrum.png?1696515875'
   };
 
   // Fallback emoji icons
@@ -31,7 +33,9 @@ class CryptoLogoService {
     'DAI': '🟡',
     'ADA': '🔵',
     'DOT': '🔴',
-    'LINK': '🔵'
+    'LINK': '🔵',
+    'UNI': '🟣',
+    'ARB': '🔵'
   };
 
   /**
