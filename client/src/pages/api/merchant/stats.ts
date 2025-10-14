@@ -2,6 +2,15 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../lib/supabase-server';
 import { authenticateToken, AuthRequest } from '../../../lib/auth-middleware';
 
+interface PaymentRequest {
+  id: string;
+  amount: string;
+  currency: string;
+  status: string;
+  created_at: string;
+  description?: string;
+}
+
 export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -28,8 +37,8 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       }
 
       // Calculate stats
-      const completedPayments = payments?.filter(p => p.status === 'completed') || [];
-      const totalRevenue = completedPayments.reduce((sum, p) => {
+      const completedPayments = (payments as PaymentRequest[])?.filter((p: PaymentRequest) => p.status === 'completed') || [];
+      const totalRevenue = completedPayments.reduce((sum: number, p: PaymentRequest) => {
         // Convert crypto amount to USD (simplified - in production you'd use current prices)
         const amount = parseFloat(p.amount) || 0;
         return sum + amount; // Assuming amounts are already in USD equivalent
@@ -40,10 +49,10 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       const conversionRate = totalTransactions > 0 ? (completedTransactions / totalTransactions) * 100 : 0;
 
       // Get unique customers (simplified - using payment request IDs as proxy)
-      const uniqueCustomers = new Set(payments?.map(p => p.id) || []).size;
+      const uniqueCustomers = new Set((payments as PaymentRequest[])?.map((p: PaymentRequest) => p.id) || []).size;
 
       // Recent transactions (last 10)
-      const recentTransactions = (payments || []).slice(0, 10).map(p => ({
+      const recentTransactions = (payments as PaymentRequest[] || []).slice(0, 10).map((p: PaymentRequest) => ({
         id: p.id,
         amount: parseFloat(p.amount) || 0,
         currency: p.currency,
