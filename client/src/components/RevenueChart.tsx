@@ -118,6 +118,7 @@ export default function RevenueChart({ data, className = '' }: RevenueChartProps
           display: true,
           color: 'rgba(0, 0, 0, 0.05)'
         },
+        min: 0,
         ticks: {
           font: {
             size: 11
