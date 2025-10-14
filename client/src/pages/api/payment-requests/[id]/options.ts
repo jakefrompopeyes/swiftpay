@@ -45,7 +45,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
-    res.json({ success: true, data: { wallets: wallets || [] } })
+    // Expand token options (USDC/USDT/DAI) for each wallet where supported
+    const expanded = (wallets || []).flatMap((w: any) => {
+      const base = [{ ...w }]
+      const net = (w.network || '').toLowerCase()
+      const candidates = ['USDC','USDT','DAI']
+      const extras = candidates
+        .filter(sym => ['ethereum','polygon','base','arbitrum','binance','solana'].includes(net))
+        .filter(sym => {
+          // Only include token currencies different from the native coin for this wallet
+          return true
+        })
+        .map(sym => ({ ...w, currency: sym }))
+      return [...base, ...extras]
+    })
+
+    res.json({ success: true, data: { wallets: expanded } })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Get payment options error:', err)

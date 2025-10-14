@@ -12,6 +12,7 @@ class CryptoLogoService {
     'MATIC': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png?1696501970',
     'USDC': 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png?1696501970',
     'USDT': 'https://assets.coingecko.com/coins/images/325/small/Tether.png?1696501970',
+    'DAI': 'https://assets.coingecko.com/coins/images/9956/small/4943.png?1696502774',
     'ADA': 'https://assets.coingecko.com/coins/images/975/small/cardano.png?1696502090',
     'DOT': 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png?1696512008',
     'LINK': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png?1696502009'
@@ -27,6 +28,7 @@ class CryptoLogoService {
     'MATIC': '🟣',
     'USDC': '🔵',
     'USDT': '🟢',
+    'DAI': '🟡',
     'ADA': '🔵',
     'DOT': '🔴',
     'LINK': '🔵'

@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const cryptocurrencies = ['BTC', 'ETH', 'USDC', 'USDT', 'BNB', 'ADA', 'SOL', 'DOT', 'LINK', 'MATIC'];
+    const cryptocurrencies = ['BTC', 'ETH', 'USDC', 'USDT', 'DAI', 'BNB', 'ADA', 'SOL', 'DOT', 'LINK', 'MATIC'];
     const prices: Record<string, number> = {};
     
     for (const crypto of cryptocurrencies) {

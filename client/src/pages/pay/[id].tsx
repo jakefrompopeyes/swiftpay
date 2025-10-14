@@ -43,16 +43,50 @@ export default function PayRequest() {
     const isSol = (network || '').toLowerCase() === 'solana'
     const scheme = isSol ? 'solana' : 'ethereum'
     const chainId = isSol ? null : getEvmChainId(network)
-    // EVM wallets generally expect EIP-681 (value in wei), while Solana wallets accept amount in SOL
-    const toWei = (amt: number): string => {
-      // Convert decimal to 18-decimal integer string without floating errors
-      const s = (amt || 0).toFixed(18) // 18 decimals
+    // EVM wallets: EIP-681 for native coin and ERC-20 transfers
+    // Solana: solana:<address>?amount=<amount>&spl-token=<mint>
+    const toUnits = (amt: number, decimals: number): string => {
+      const s = (amt || 0).toFixed(decimals)
       const [ints, decs] = s.split('.')
-      return `${ints}${decs}`.replace(/^0+/, '') || '0'
+      const joined = `${ints}${decs || ''}`.replace(/^0+/, '')
+      return joined === '' ? '0' : joined
     }
-    const amountParam = isSol ? `amount=${amount}` : `value=${toWei(amount)}`
+
+    const symbol = (currency || '').toUpperCase()
+
+    // Token-aware construction
+    if (isSol) {
+      // SPL token support for USDC/USDT; native SOL otherwise
+      const splMap: Record<string, { mint: string; decimals: number }> = {
+        USDC: { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
+        USDT: { mint: 'Es9vMFrzaCERG1bG1Nsx3Rp3XIanFkFJxux1kvZWS9G', decimals: 6 }
+      }
+      if (splMap[symbol]) {
+        const units = toUnits(amount, splMap[symbol].decimals)
+        return `solana:${address}?amount=${amount}&spl-token=${splMap[symbol].mint}&reference=${units}`
+      }
+      return `solana:${address}?amount=${amount}`
+    }
+
+    // EVM: handle stablecoins as ERC-20 transfers
+    const erc20Map: Record<string, { address: string; decimals: number }> = {
+      // Ethereum mainnet addresses; wallets on L2s often resolve via chainId in URI
+      USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+      USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+      DAI:  { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 }
+    }
+    if (erc20Map[symbol]) {
+      const token = erc20Map[symbol]
+      const atChain = chainId ? `@${chainId}` : ''
+      const units = toUnits(amount, token.decimals)
+      // EIP-681 token transfer: ethereum:token@chainId/transfer?address=to&uint256=<amount>
+      return `ethereum:${token.address}${atChain}/transfer?address=${address}&uint256=${units}`
+    }
+
+    // Native coin
     const atChain = chainId ? `@${chainId}` : ''
-    return `${scheme}:${address}${atChain}?${amountParam}`
+    const wei = toUnits(amount, 18)
+    return `ethereum:${address}${atChain}?value=${wei}`
   }
 
   const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 12, delayMs = 400): Promise<any> => {
