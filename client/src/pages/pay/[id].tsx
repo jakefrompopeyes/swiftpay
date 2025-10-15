@@ -105,7 +105,16 @@ export default function PayRequest() {
         if (j.success) {
           setOptions(j.data)
           if (j.data.wallets && j.data.wallets.length > 0) {
-            setSelectedWallet(j.data.wallets[0])
+            const first = j.data.wallets[0]
+            setSelectedWallet(first)
+            // Persist default selection immediately so admin views reflect correct coin/network
+            try {
+              fetch(`/api/payment-requests/${id}/select`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ network: first.network, address: first.address, currency: first.currency })
+              })
+            } catch {}
           }
         }
       })

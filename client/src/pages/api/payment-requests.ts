@@ -29,7 +29,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         const { data, error } = await supabaseAdmin
           .from('payment_requests')
           .insert(paymentRequest)
-          .select('*')
+          .select('id, user_id, amount, currency, network, description, status, to_address, tx_hash, created_at, updated_at')
           .single();
 
         if (error) {
