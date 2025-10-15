@@ -86,7 +86,11 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
         .from('payouts')
         .select('amount_usd, status')
         .eq('user_id', userId)
-      const totalPaid = (payouts || []).filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount_usd || 0), 0)
+      type PayoutRow = { amount_usd: number | string; status: string }
+      const payoutRows: PayoutRow[] = (payouts || []) as PayoutRow[]
+      const totalPaid = payoutRows
+        .filter((p: PayoutRow) => p.status === 'completed')
+        .reduce((s: number, p: PayoutRow) => s + Number(p.amount_usd || 0), 0)
       availableUSD = Math.max(0, availableUSD - totalPaid)
 
       return res2.json({ success: true, data: { availableUSD, pendingUSD, recentTransactions } })
