@@ -26,7 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         network: String(network),
         to_address: String(address),
         currency: String(currency).toUpperCase(),
+        // amount is stored as crypto amount after user selection only for display; USD is derived
         amount: amount != null ? Number(amount) : undefined,
+        method_selected: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

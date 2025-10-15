@@ -74,7 +74,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
         const { data: paymentRequests, error } = await supabaseAdmin
           .from('payment_requests')
-          .select('*')
+          .select('id, user_id, amount, currency, network, description, status, to_address, tx_hash, created_at, updated_at, method_selected')
           .eq('user_id', req.user!.id)
           .order('created_at', { ascending: false });
 

@@ -79,8 +79,8 @@ export default function MerchantLinks() {
                   <tr key={pr.id}>
                     <td className="px-4 py-3 text-sm text-gray-600">{new Date(pr.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm font-medium">{pr.amount} {pr.currency}</td>
-                    <td className="px-4 py-3 text-sm capitalize">{pr.network}</td>
-                    <td className="px-4 py-3 text-sm font-mono">{pr.to_address.slice(0, 6)}…{pr.to_address.slice(-4)}</td>
+                    <td className="px-4 py-3 text-sm capitalize">{pr.network || '-'}</td>
+                    <td className="px-4 py-3 text-sm font-mono">{pr.to_address ? `${pr.to_address.slice(0, 6)}…${pr.to_address.slice(-4)}` : '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded text-xs ${
                         pr.status === 'completed'

@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fiveMinutesAgo = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
     const { data: pendings, error } = await supabaseAdmin
       .from('payment_requests')
-      .select('id, to_address, amount, currency, network, status, created_at')
+      .select('id, to_address, amount, currency, network, status, created_at, method_selected')
       .eq('status', 'pending')
       .lte('created_at', new Date().toISOString())
       .order('created_at', { ascending: false })
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let completed = 0, failed = 0
     for (const p of pendings || []) {
       const isExpired = new Date(p.created_at).toISOString() < fiveMinutesAgo
-      const txHash = await checkOnChain(p)
+      const txHash = p.method_selected ? await checkOnChain(p) : null
       if (txHash) {
         await supabaseAdmin.from('payment_requests').update({ status:'completed', transaction_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
         completed++

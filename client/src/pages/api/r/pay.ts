@@ -83,18 +83,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // If amount passed is in USD, convert to crypto for storage/QR math
-    const selectedCurrency = String(wallet?.currency || upperCurrency || 'ETH')
-    const cryptoAmount = parsedAmount > 0 ? await convertFromFiat(parsedAmount, selectedCurrency) : 0
+    // Coin-agnostic flow: treat incoming amount as USD and store coin later upon user selection
+    const usdAmount = parsedAmount > 0 ? parsedAmount : 0
 
     const paymentRequest = {
       // Let Supabase generate UUID id
       user_id: merchantId,
-      amount: cryptoAmount,
-      currency: selectedCurrency,
-      network: wallet.network,
+      amount: usdAmount,
+      currency: 'USD',
+      network: null as any,
       description: safeDescription,
       status: 'pending',
-      to_address: wallet.address
+      to_address: null as any,
+      // coin-agnostic until user selects a method
     }
 
     const { data, error } = await supabaseAdmin
