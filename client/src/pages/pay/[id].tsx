@@ -168,6 +168,15 @@ export default function PayRequest() {
     setCurrentAmount(amountToPay)
     const uri = buildPaymentUri(wallet.network, wallet.address, amountToPay, wallet.currency)
     setQr(await QRCode.toDataURL(uri))
+
+    // Persist the selection back to the payment request so monitoring uses correct chain/address
+    try {
+      await fetch(`/api/payment-requests/${id}/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ network: wallet.network, address: wallet.address, currency: wallet.currency, amount: amountToPay })
+      })
+    } catch {}
   }
 
   const getStatusIcon = () => {
