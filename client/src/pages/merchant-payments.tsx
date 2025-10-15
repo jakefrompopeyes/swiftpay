@@ -373,6 +373,16 @@ export default function MerchantPayments() {
 
                       {/* Withdraw Button */}
                       <button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('swiftpay_token')
+                            const body = { amountUsd: parseFloat(withdrawalAmount), toAddress: 'YOUR_WITHDRAWAL_ADDRESS', network: 'ethereum', currency: 'USDC' }
+                            const r = await fetch('/api/payouts/create', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) })
+                            const j = await r.json()
+                            if (!j.success) { alert(j.error || 'Withdrawal failed'); return }
+                            alert('Withdrawal submitted! Tx: ' + (j.data.txHash || 'pending'))
+                          } catch (e:any) { alert(e.message || 'Withdrawal failed') }
+                        }}
                         disabled={!withdrawalAmount || parseFloat(withdrawalAmount) <= 0}
                         className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200"
                       >
