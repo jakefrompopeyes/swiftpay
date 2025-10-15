@@ -262,16 +262,17 @@ export const backendAPI = {
       return handleResponse(response)
     },
     async get(id: string) {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests/${id}`)
+      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests/${id}?ts=${Date.now()}`, { cache: 'no-store' })
       return handleResponse(response)
     },
     async status(id: string) {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests/${id}/status`)
+      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests/${id}/status?ts=${Date.now()}`, { cache: 'no-store' })
       return handleResponse(response)
     },
     async list() {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests`, {
-        headers: getAuthHeaders()
+      const response = await fetch(`${BACKEND_BASE_URL}/api/payment-requests?ts=${Date.now()}`, {
+        headers: getAuthHeaders(),
+        cache: 'no-store'
       })
       return handleResponse(response)
     }
