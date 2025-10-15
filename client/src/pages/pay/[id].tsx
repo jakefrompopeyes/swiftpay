@@ -186,6 +186,13 @@ export default function PayRequest() {
         body: JSON.stringify({ network: wallet.network, address: wallet.address, currency: wallet.currency, amount: amountToPay })
       })
     } catch {}
+
+    // Update URL query with currency for shareability (optional, non-blocking)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set('currency', String(wallet.currency).toUpperCase())
+      window.history.replaceState({}, '', url.toString())
+    } catch {}
   }
 
   const getStatusIcon = () => {

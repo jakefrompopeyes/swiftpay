@@ -17,17 +17,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     res.setHeader('Pragma', 'no-cache')
     res.setHeader('Expires', '0')
-    const { merchantId, amount, currency, description } = req.query
+    const { merchantId, amount, currency, description, network: qNetwork } = req.query
 
     if (!merchantId || typeof merchantId !== 'string') {
       res.status(400).json({ success: false, error: 'merchantId is required' })
       return
     }
 
-    if (!currency || typeof currency !== 'string') {
-      res.status(400).json({ success: false, error: 'currency is required' })
-      return
-    }
+    // currency is optional; we'll infer from selected wallet if not provided
 
     const parsedAmount = amount ? parseFloat(String(amount)) : 0
     const safeDescription = description ? String(description) : ''
@@ -35,15 +32,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Normalize Polygon symbols: accept MATIC or POL, always treat as MATIC price for gas token
     if (upperCurrency === 'POL') upperCurrency = 'MATIC'
 
-    // Find merchant wallet for requested currency
-    const { data: wallet, error: walletErr } = await supabaseAdmin
-      .from('wallets')
-      .select('address, network, currency')
-      .eq('user_id', merchantId)
-      .eq('currency', upperCurrency)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle()
+    // Optional network preference (disambiguate ETH across EVMs)
+    let wallet: any = null
+    let walletErr: any = null
+    if (qNetwork && typeof qNetwork === 'string') {
+      const { data, error } = await supabaseAdmin
+        .from('wallets')
+        .select('address, network, currency')
+        .eq('user_id', merchantId)
+        .eq('network', String(qNetwork).toLowerCase())
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle()
+      wallet = data; walletErr = error
+    }
+    if (!wallet && !walletErr) {
+      // Load all active wallets
+      const { data: all, error } = await supabaseAdmin
+        .from('wallets')
+        .select('address, network, currency')
+        .eq('user_id', merchantId)
+        .eq('is_active', true)
+      if (error) { walletErr = error } else {
+        type W = { address: string; network: string; currency: string }
+        const list: W[] = (all || []) as W[]
+        // Try currency match if provided
+        let pick: W | null = (typeof currency === 'string') ? (list.find((w: W) => String(w.currency).toUpperCase() === upperCurrency) || null) : null
+        // Else prefer stablecoins, then first
+        if (!pick) {
+          const order = ['USDC','USDT','DAI','ETH','MATIC','SOL','BNB']
+          for (const sym of order) {
+            const found = list.find((w: W) => String(w.currency).toUpperCase() === sym)
+            if (found) { pick = found; break }
+          }
+        }
+        wallet = pick || list[0] || null
+      }
+    }
 
     if (walletErr) {
       // eslint-disable-next-line no-console
@@ -58,13 +83,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // If amount passed is in USD, convert to crypto for storage/QR math
-    const cryptoAmount = parsedAmount > 0 ? await convertFromFiat(parsedAmount, upperCurrency) : 0
+    const selectedCurrency = String(wallet?.currency || upperCurrency || 'ETH')
+    const cryptoAmount = parsedAmount > 0 ? await convertFromFiat(parsedAmount, selectedCurrency) : 0
 
     const paymentRequest = {
       // Let Supabase generate UUID id
       user_id: merchantId,
       amount: cryptoAmount,
-      currency: upperCurrency,
+      currency: selectedCurrency,
       network: wallet.network,
       description: safeDescription,
       status: 'pending',
