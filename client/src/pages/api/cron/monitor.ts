@@ -74,11 +74,15 @@ async function checkOnChain(payment: any): Promise<string | null> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
+  // Allow GET or POST so Vercel Cron can trigger without custom method/body
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ success: false, error: 'Method not allowed' })
   if (!supabaseAdmin) return res.status(500).json({ success: false, error: 'Database not configured' })
 
-  const secret = req.headers['x-cron-secret'] as string | undefined
-  if (!secret || secret !== (process.env.CRON_SECRET || '')) return res.status(401).json({ success: false, error: 'Unauthorized' })
+  // Accept either header or query fallback for Vercel Cron
+  const headerSecret = req.headers['x-cron-secret'] as string | undefined
+  const querySecret = typeof req.query.secret === 'string' ? (req.query.secret as string) : undefined
+  const provided = headerSecret || querySecret
+  if (!provided || provided !== (process.env.CRON_SECRET || '')) return res.status(401).json({ success: false, error: 'Unauthorized' })
 
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
