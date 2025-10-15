@@ -85,7 +85,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!provided || provided !== (process.env.CRON_SECRET || '')) return res.status(401).json({ success: false, error: 'Unauthorized' })
 
   try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
+    const fiveMinutesAgo = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
     const { data: pendings, error } = await supabaseAdmin
       .from('payment_requests')
       .select('id, to_address, amount, currency, network, status, created_at')
