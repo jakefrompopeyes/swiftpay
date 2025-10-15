@@ -61,6 +61,22 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
+      // Expire if older than configured window
+      const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
+      const cutoff = Date.now() - expireMinutes * 60 * 1000
+      const createdMs = new Date(payment.created_at as any).getTime()
+      if (createdMs < cutoff) {
+        const { data: expired, error: expErr } = await supabaseAdmin
+          .from('payment_requests')
+          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', paymentId)
+          .select('id, status')
+          .single()
+        if (!expErr) {
+          return res.json({ success: true, message: 'Payment expired', data: { status: expired.status } })
+        }
+      }
+
       // Real on-chain check
       const network = String(payment.network || '').toLowerCase()
       const currency = String(payment.currency || '').toUpperCase()
