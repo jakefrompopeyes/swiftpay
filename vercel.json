@@ -1,4 +1,13 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/monitor",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+
+{
   "version": 2,
   "builds": [
     {

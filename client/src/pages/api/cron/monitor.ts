@@ -80,8 +80,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Accept either header or query fallback for Vercel Cron
   const headerSecret = req.headers['x-cron-secret'] as string | undefined
+  const authHeader = (req.headers['authorization'] as string | undefined) || ''
+  const bearer = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined
   const querySecret = typeof req.query.secret === 'string' ? (req.query.secret as string) : undefined
-  const provided = headerSecret || querySecret
+  const provided = headerSecret || bearer || querySecret
   if (!provided || provided !== (process.env.CRON_SECRET || '')) return res.status(401).json({ success: false, error: 'Unauthorized' })
 
   try {
