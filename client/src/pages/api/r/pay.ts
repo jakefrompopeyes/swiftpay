@@ -91,10 +91,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user_id: merchantId,
       amount: usdAmount,
       currency: 'USD',
-      network: null as any,
+      network: null,
       description: safeDescription,
       status: 'pending',
-      to_address: null as any,
+      to_address: null,
       // coin-agnostic until user selects a method
     }
 
