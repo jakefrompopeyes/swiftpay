@@ -30,7 +30,11 @@ export default function MerchantLinks() {
     }
   }
 
-  useEffect(() => { fetchLinks() }, [])
+  useEffect(() => {
+    fetchLinks()
+    const id = setInterval(fetchLinks, 30000)
+    return () => clearInterval(id)
+  }, [])
 
   const openLink = (id: string) => {
     const base = window.location.origin
@@ -78,7 +82,13 @@ export default function MerchantLinks() {
                     <td className="px-4 py-3 text-sm capitalize">{pr.network}</td>
                     <td className="px-4 py-3 text-sm font-mono">{pr.to_address.slice(0, 6)}…{pr.to_address.slice(-4)}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs ${pr.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{pr.status}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        pr.status === 'completed'
+                          ? 'bg-green-100 text-green-700'
+                          : pr.status === 'failed' || pr.status === 'expired'
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                      }`}>{pr.status}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button className="inline-flex items-center px-2 py-1 border rounded text-sm mr-2" onClick={() => openLink(pr.id)}>
