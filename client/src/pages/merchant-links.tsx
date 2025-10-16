@@ -64,7 +64,22 @@ export default function MerchantLinks() {
             <h1 className="text-2xl font-bold text-gray-900">Payment Links</h1>
             <p className="text-gray-600">View and manage your generated checkout links</p>
           </div>
-          <button onClick={fetchLinks} className="px-3 py-2 border rounded-md text-sm">Refresh</button>
+          <div className="space-x-2">
+            <button onClick={fetchLinks} className="px-3 py-2 border rounded-md text-sm">Refresh</button>
+            <button
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('swiftpay_token')
+                  if (!token) return
+                  await fetch('/api/payment-requests/expire-stale', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+                  fetchLinks()
+                } catch {}
+              }}
+              className="px-3 py-2 border rounded-md text-sm"
+            >
+              Expire Old Pending
+            </button>
+          </div>
         </div>
 
         {loading ? (
