@@ -19,6 +19,7 @@ interface PaymentRequest {
 export default function MerchantLinks() {
   const [items, setItems] = useState<PaymentRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [recent, setRecent] = useState<any[]>([])
 
   const fetchLinks = async () => {
     setLoading(true)
@@ -32,6 +33,15 @@ export default function MerchantLinks() {
 
   useEffect(() => {
     fetchLinks()
+    ;(async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
+        if (!token) return
+        const r = await fetch('/api/merchant/stats', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        const j = await r.json()
+        if (j?.success) setRecent(j.data?.recentTransactions || [])
+      } catch {}
+    })()
     const id = setInterval(fetchLinks, 30000)
     return () => clearInterval(id)
   }, [])
@@ -104,6 +114,37 @@ export default function MerchantLinks() {
             </table>
           </div>
         )}
+      </div>
+      {/* Recent Transactions */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
+              <button onClick={fetchLinks} className="px-2 py-1 text-xs border rounded-md">Refresh</button>
+            </div>
+            {recent && recent.length > 0 ? (
+              <div className="space-y-3">
+                {recent.map((t: any) => (
+                  <div key={t.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{t.description || 'Payment'}</div>
+                      <div className="text-xs text-gray-500">{new Date(t.timestamp || t.created_at).toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900">${(t.amount || 0).toFixed ? t.amount.toFixed(2) : t.amount} {t.currency}</div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        t.status === 'completed' ? 'bg-green-100 text-green-800' : t.status === 'failed' ? 'bg-rose-100 text-rose-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>{t.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No recent transactions</div>
+            )}
+          </div>
+        </div>
       </div>
     </>
   )
