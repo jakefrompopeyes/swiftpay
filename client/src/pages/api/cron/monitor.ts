@@ -89,6 +89,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
     const fiveMinutesAgo = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
+
+    // Bulk expire first to ensure old items flip even if chain checks fail
+    await supabaseAdmin
+      .from('payment_requests')
+      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .eq('status', 'pending')
+      .lt('created_at', fiveMinutesAgo)
+
     const { data: pendings, error } = await supabaseAdmin
       .from('payment_requests')
       .select('id, to_address, amount, currency, network, status, created_at, method_selected')

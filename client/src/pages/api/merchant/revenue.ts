@@ -69,10 +69,11 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
         }
       }))
 
-      // Group by day (YYYY-MM-DD) and sum USD by status buckets
-      const dayToCompletedUsd: Record<string, number> = {}
-      const dayToPendingUsd: Record<string, number> = {}
-      const dayToUnderpaidUsd: Record<string, number> = {}
+             // Group by day (YYYY-MM-DD) and sum USD by status buckets
+             const dayToCompletedUsd: Record<string, number> = {}
+             const dayToPendingUsd: Record<string, number> = {}
+             const dayToUnderpaidUsd: Record<string, number> = {}
+             const dayToFailedUsd: Record<string, number> = {}
       for (const p of payments) {
         const d = new Date(p.created_at)
         const dayKey = d.toISOString().slice(0, 10)
@@ -80,17 +81,19 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
         const amt = parseFloat(String(p.amount)) || 0
         const price = priceMap[sym] || 0
         const usd = price > 0 ? amt * price : 0
-        const status = String(p.status || '').toLowerCase()
-        if (status === 'completed') dayToCompletedUsd[dayKey] = (dayToCompletedUsd[dayKey] || 0) + usd
-        else if (status === 'pending') dayToPendingUsd[dayKey] = (dayToPendingUsd[dayKey] || 0) + usd
-        else if (status === 'underpaid') dayToUnderpaidUsd[dayKey] = (dayToUnderpaidUsd[dayKey] || 0) + usd
+               const status = String(p.status || '').toLowerCase()
+               if (status === 'completed') dayToCompletedUsd[dayKey] = (dayToCompletedUsd[dayKey] || 0) + usd
+               else if (status === 'pending') dayToPendingUsd[dayKey] = (dayToPendingUsd[dayKey] || 0) + usd
+               else if (status === 'underpaid') dayToUnderpaidUsd[dayKey] = (dayToUnderpaidUsd[dayKey] || 0) + usd
+               else if (status === 'failed') dayToFailedUsd[dayKey] = (dayToFailedUsd[dayKey] || 0) + usd
       }
 
       // Build consecutive day labels for the window to avoid gaps
       const labels: string[] = []
       const completed: number[] = []
       const pending: number[] = []
-      const underpaid: number[] = []
+             const underpaid: number[] = []
+             const failed: number[] = []
       const start = new Date()
       start.setHours(0, 0, 0, 0)
       start.setDate(start.getDate() - (days - 1))
@@ -100,7 +103,8 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
         labels.push(dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
         completed.push(Number((dayToCompletedUsd[key] || 0).toFixed(2)))
         pending.push(Number((dayToPendingUsd[key] || 0).toFixed(2)))
-        underpaid.push(Number((dayToUnderpaidUsd[key] || 0).toFixed(2)))
+               underpaid.push(Number((dayToUnderpaidUsd[key] || 0).toFixed(2)))
+               failed.push(Number((dayToFailedUsd[key] || 0).toFixed(2)))
       }
 
       // Week-over-week for completed revenue (last 7 vs previous 7)
@@ -124,15 +128,17 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
           }
         ],
         meta: {
-          buckets: {
-            completed,
-            pending,
-            underpaid
-          },
+                 buckets: {
+                   completed,
+                   pending,
+                   underpaid,
+                   failed
+                 },
           summary: {
             totalCompletedUsd: Number(sum(completed).toFixed(2)),
             totalPendingUsd: Number(sum(pending).toFixed(2)),
-            totalUnderpaidUsd: Number(sum(underpaid).toFixed(2)),
+                   totalUnderpaidUsd: Number(sum(underpaid).toFixed(2)),
+                   totalFailedUsd: Number(sum(failed).toFixed(2)),
             wow: {
               current7dUsd: Number(last7Sum.toFixed(2)),
               prev7dUsd: Number(prev7Sum.toFixed(2)),

@@ -411,10 +411,10 @@ function RevenueChartWrapper() {
             <div className="text-xs text-yellow-700">Pending</div>
             <div className="text-lg font-semibold text-yellow-900">${meta.summary.totalPendingUsd.toFixed(2)}</div>
           </div>
-          <div className="p-3 rounded-lg bg-red-50">
-            <div className="text-xs text-red-700">Underpaid</div>
-            <div className="text-lg font-semibold text-red-900">${meta.summary.totalUnderpaidUsd.toFixed(2)}</div>
-          </div>
+                <div className="p-3 rounded-lg bg-rose-50">
+                  <div className="text-xs text-rose-700">Failed Payments</div>
+                  <div className="text-lg font-semibold text-rose-900">${(meta.summary.totalFailedUsd || 0).toFixed(2)}</div>
+                </div>
           <div className={`p-3 rounded-lg ${meta.summary.wow.pct >= 0 ? 'bg-green-50' : 'bg-rose-50'}`}>
             <div className={`text-xs ${meta.summary.wow.pct >= 0 ? 'text-green-700' : 'text-rose-700'}`}>WoW (last 7d vs prev 7d)</div>
             <div className={`text-lg font-semibold ${meta.summary.wow.pct >= 0 ? 'text-green-900' : 'text-rose-900'}`}>
