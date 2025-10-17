@@ -69,7 +69,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           .from('payment_requests')
           .update({ status: 'failed', updated_at: new Date().toISOString() })
           .eq('user_id', req.user!.id)
-          .eq('status', 'pending')
+          .filter('status', 'ilike', 'pending')
           .lt('created_at', threshold)
 
         const { data: paymentRequests, error } = await supabaseAdmin

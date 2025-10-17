@@ -19,6 +19,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({})
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [customWallets, setCustomWallets] = useState<Array<{id:string,address:string,network:string,currency?:string,is_active:boolean}>>([])
+  const [newCW, setNewCW] = useState<{network:string,address:string,currency?:string}>({ network: 'ethereum', address: '' })
   const [keys, setKeys] = useState<Array<{id:string,name:string,created_at:string,last_used_at:string|null}>>([])
   const [newKeyName, setNewKeyName] = useState('')
   const [newKeyPlain, setNewKeyPlain] = useState<string | null>(null)
@@ -42,6 +44,15 @@ export default function SettingsPage() {
       finally { setLoading(false) }
     }
     load()
+    // Load custom wallets
+    ;(async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
+        if (!token) return
+        const r = await fetch('/api/settings/wallets-custom', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        const j = await r.json(); if (j?.success) setCustomWallets(j.data || [])
+      } catch {}
+    })()
   }, [])
 
   const onChange = (key: keyof Settings, value: string) => {
@@ -197,6 +208,40 @@ export default function SettingsPage() {
                     <label className="block text-sm text-gray-700 mb-1">Secondary Color</label>
                     <input type="color" value={settings.branding_secondary || '#10b981'} onChange={(e)=>onChange('branding_secondary', e.target.value)} className="w-16 h-10 p-0 border rounded" />
                   </div>
+                </div>
+              </section>
+
+              {/* Custom Wallets (BYO) */}
+              <section className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Custom Wallets (Bring Your Own)</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <select value={newCW.network} onChange={(e)=>setNewCW(s=>({...s,network:e.target.value}))} className="px-3 py-2 border rounded-md">
+                    {['ethereum','polygon','base','arbitrum','binance','solana'].map(n=> <option key={n} value={n}>{n}</option>)}
+                  </select>
+                  <input value={newCW.address} onChange={(e)=>setNewCW(s=>({...s,address:e.target.value}))} placeholder="Public address" className="px-3 py-2 border rounded-md"/>
+                  <div className="flex space-x-2">
+                    <input value={newCW.currency || ''} onChange={(e)=>setNewCW(s=>({...s,currency:e.target.value}))} placeholder="Currency (optional)" className="flex-1 px-3 py-2 border rounded-md"/>
+                    <button onClick={async ()=>{
+                      try {
+                        const token = localStorage.getItem('swiftpay_token')
+                        const r = await fetch('/api/settings/wallets-custom',{ method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(newCW) })
+                        const j = await r.json(); if (j.success) { setCustomWallets(w=>[j.data, ...w]); setNewCW({ network:'ethereum', address:'' }) } else alert(j.error)
+                      } catch {}
+                    }} className="px-3 py-2 bg-indigo-600 text-white rounded-md">Add</button>
+                  </div>
+                </div>
+                <div className="border rounded-md divide-y">
+                  {customWallets.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No custom wallets</div>
+                  ) : customWallets.map((w)=> (
+                    <div key={w.id} className="p-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">{w.network} {w.currency ? `• ${w.currency}` : ''}</div>
+                        <div className="text-xs font-mono text-gray-500">{w.address}</div>
+                      </div>
+                      <span className="text-xs px-2 py-1 bg-gray-100 rounded">Custom</span>
+                    </div>
+                  ))}
                 </div>
               </section>
 

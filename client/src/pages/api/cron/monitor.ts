@@ -94,13 +94,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin
       .from('payment_requests')
       .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('status', 'pending')
+      .filter('status', 'ilike', 'pending')
       .lt('created_at', fiveMinutesAgo)
 
     const { data: pendings, error } = await supabaseAdmin
       .from('payment_requests')
       .select('id, to_address, amount, currency, network, status, created_at, method_selected')
-      .eq('status', 'pending')
+      .ilike('status', 'pending')
       .lte('created_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     if (error) return res.status(500).json({ success: false, error: 'Failed to load pending' })
