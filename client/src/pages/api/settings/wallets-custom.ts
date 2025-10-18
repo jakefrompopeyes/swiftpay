@@ -33,13 +33,39 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         if (!network || !address) return res.status(400).json({ success: false, error: 'Missing network or address' })
         if (!validate(network, address)) return res.status(400).json({ success: false, error: 'Invalid address for network' })
 
-        const row = { user_id: userId, network: String(network).toLowerCase(), address: String(address), currency: String(currency || '').toUpperCase() || null, is_active: true, source: 'custom' }
+        // Normalize currency by network if not provided
+        const n = String(network).toLowerCase()
+        const currencyDefaultMap: Record<string, string> = {
+          ethereum: 'ETH',
+          base: 'ETH',
+          arbitrum: 'ETH',
+          optimism: 'ETH',
+          polygon: 'MATIC',
+          binance: 'BNB',
+          avalanche: 'AVAX',
+          fantom: 'FTM',
+          solana: 'SOL'
+        }
+        const normalizedCurrency = (String(currency || '').trim() || currencyDefaultMap[n] || '').toUpperCase() || null
+
+        // Insert with minimal fields; set private_key to empty string for legacy NOT NULL schemas
+        const row: any = {
+          user_id: userId,
+          network: n,
+          address: String(address),
+          currency: normalizedCurrency,
+          is_active: true,
+          source: 'custom'
+        }
+        // Backward compatibility: some schemas require non-null private_key
+        row.private_key = ''
+
         const { data, error } = await supabaseAdmin
           .from('wallets')
           .insert(row)
           .select('id, address, network, currency, is_active, source')
           .single()
-        if (error) return res.status(500).json({ success: false, error: 'Failed to save custom wallet' })
+        if (error) return res.status(500).json({ success: false, error: error.message || 'Failed to save custom wallet' })
         return res.json({ success: true, data })
       }
 
