@@ -78,13 +78,7 @@ export default function LeftNavigation() {
           icon: ShareIcon,
           description: 'Payment integration'
         },
-        {
-          id: 'merchant-payments',
-          name: 'Access Funds',
-          href: '/merchant-payments',
-          icon: ArrowDownTrayIcon,
-          description: 'Withdraw payments'
-        },
+        
         {
           id: 'vendor-wallets',
           name: 'Manage Wallets',
