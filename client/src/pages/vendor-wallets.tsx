@@ -68,6 +68,7 @@ export default function VendorWallets() {
   const [creatingLinkFor, setCreatingLinkFor] = useState<string | null>(null)
   const [cryptoLogos, setCryptoLogos] = useState<Record<string, string>>({})
   const [prices, setPrices] = useState<Record<string, number>>({})
+  const [newCW, setNewCW] = useState<{ network: string; address: string; currency?: string }>({ network: 'ethereum', address: '' })
   const router = useRouter()
 
   useEffect(() => {
@@ -498,14 +499,6 @@ export default function VendorWallets() {
                         <ArrowsRightLeftIcon className="h-4 w-4 mr-2" />
                          Convert Coins
                        </Link>
-                       <button
-                         onClick={createMissingWallets}
-                         disabled={isCreatingWallet}
-                         className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                       >
-                         <SparklesIcon className="h-4 w-4 mr-2" />
-                         Create Missing Wallets
-                       </button>
                      </div>
             </div>
           </div>
@@ -580,6 +573,38 @@ export default function VendorWallets() {
           {/* Main Content */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
+              {/* Add Custom Wallet */}
+              <div className="mb-8">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-3">Add Wallet to Accept</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <select value={newCW.network} onChange={(e)=>setNewCW(s=>({ ...s, network: e.target.value }))} className="px-3 py-2 border rounded-md">
+                    {['ethereum','polygon','base','arbitrum','binance','optimism','avalanche','fantom','solana'].map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <input value={newCW.address} onChange={(e)=>setNewCW(s=>({ ...s, address: e.target.value }))} placeholder="Public address" className="px-3 py-2 border rounded-md"/>
+                  <div className="flex items-center space-x-2">
+                    <input value={newCW.currency || ''} onChange={(e)=>setNewCW(s=>({ ...s, currency: e.target.value }))} placeholder="Currency (optional)" className="flex-1 px-3 py-2 border rounded-md"/>
+                    <button
+                      onClick={async ()=>{
+                        try {
+                          const token = localStorage.getItem('swiftpay_token')
+                          if (!token) { toast.error('Please log in'); return }
+                          const r = await fetch('/api/settings/wallets-custom', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(newCW) })
+                          const j = await r.json()
+                          if (j.success) { toast.success('Wallet added'); setNewCW({ network:'ethereum', address:'' }); fetchWallets() }
+                          else { toast.error(j.error || 'Failed to add wallet') }
+                        } catch (e:any) { toast.error(e.message || 'Failed to add wallet') }
+                      }}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded-md"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">We never store private keys. Payments go directly to your addresses.</p>
+              </div>
+
               {/* Info */}
               <div className="mb-8">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -607,7 +632,7 @@ export default function VendorWallets() {
                 <div className="text-center py-12">
                   <WalletIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No wallets</h3>
-                  <p className="mt-1 text-sm text-gray-500">Get started by creating your first wallet.</p>
+                  <p className="mt-1 text-sm text-gray-500">Get started by adding your first wallet to accept payments.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -638,14 +663,7 @@ export default function VendorWallets() {
                               <h4 className="text-lg font-medium text-gray-900">
                                 {getCurrencyName(wallet.currency, wallet.network)} Wallet
                               </h4>
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                <ShieldCheckIcon className="h-3 w-3 mr-1" />
-                                Coinbase Cloud
-                              </span>
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <SparklesIcon className="h-3 w-3 mr-1" />
-                                Auto-Created
-                              </span>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Custom</span>
                             </div>
                             <p className="text-sm text-gray-500 font-mono">
                               {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
