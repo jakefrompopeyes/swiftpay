@@ -63,7 +63,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         const { data, error } = await supabaseAdmin
           .from('wallets')
           .insert(row)
-          .select('id, address, network, currency, is_active, source')
+          .select('id, address, network, currency, is_active')
           .single()
         if (error) return res.status(500).json({ success: false, error: error.message || 'Failed to save custom wallet' })
         return res.json({ success: true, data })

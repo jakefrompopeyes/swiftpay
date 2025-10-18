@@ -9,7 +9,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       try {
         const { data: wallets, error } = await supabaseAdmin
           .from('wallets')
-          .select('id, address, network, currency, is_active, source, created_at')
+          .select('id, address, network, currency, is_active, created_at')
           .eq('user_id', req.user!.id)
           .eq('is_active', true)
 
