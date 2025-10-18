@@ -26,9 +26,8 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // Get real balance from Coinbase CDP
-      const { coinbaseCloudService } = await import('../../../../lib/coinbase-cloud');
-      const realBalance = await coinbaseCloudService.getWalletBalance(wallet.address, wallet.network);
+      // BYO wallets: we no longer fetch balances from CDP. Return 0 or integrate chain RPC later.
+      const realBalance = '0.0000';
 
       res.json({
         success: true,

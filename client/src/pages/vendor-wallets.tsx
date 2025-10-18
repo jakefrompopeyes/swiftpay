@@ -470,7 +470,7 @@ export default function VendorWallets() {
     <>
       <Head>
         <title>Wallet Management - SwiftPay</title>
-        <meta name="description" content="Manage your cryptocurrency wallets with Coinbase Cloud" />
+        <meta name="description" content="Manage your cryptocurrency wallets (bring your own addresses)" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -480,9 +480,7 @@ export default function VendorWallets() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-extrabold text-gray-900">Wallet Management</h1>
-                <p className="mt-2 text-gray-600">
-                  Secure cryptocurrency wallets powered by Coinbase Cloud Server Wallets v2
-                </p>
+                <p className="mt-2 text-gray-600">Add and manage your own public addresses. We do not create wallets.</p>
               </div>
                      <div className="flex items-center space-x-3">
                        <button
@@ -582,7 +580,7 @@ export default function VendorWallets() {
           {/* Main Content */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              {/* Auto-Created Wallets Info */}
+              {/* Info */}
               <div className="mb-8">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start">
@@ -590,17 +588,10 @@ export default function VendorWallets() {
                       <SparklesIcon className="h-5 w-5 text-blue-400" />
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
-                        Auto-Created Wallets
-                      </h3>
+                      <h3 className="text-sm font-medium text-blue-800">Bring Your Own Wallets</h3>
                       <div className="mt-2 text-sm text-blue-700">
-                        <p>
-                          Your account comes with pre-configured wallets for major cryptocurrencies:
-                          <span className="font-semibold"> Bitcoin, Ethereum, Solana, TRON, and BNB</span>
-                        </p>
-                        <p className="mt-1">
-                          These wallets are ready to use immediately and secured by Coinbase Cloud infrastructure.
-                        </p>
+                        <p>Add public addresses for networks like Ethereum, Polygon, Base, Arbitrum, Solana, and BNB.</p>
+                        <p className="mt-1">We never store private keys. Payments go directly to your addresses.</p>
                       </div>
                     </div>
                   </div>
@@ -693,72 +684,18 @@ export default function VendorWallets() {
                           </div>
                           
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)}
-                              className="p-2 text-gray-400 hover:text-gray-600"
-                              title="Toggle Details"
-                            >
-                              {expandedWallet === wallet.id ? (
-                                <EyeSlashIcon className="h-5 w-5" />
-                              ) : (
-                                <EyeIcon className="h-5 w-5" />
-                              )}
-                            </button>
-                            
-                            <button
-                              onClick={() => copyToClipboard(wallet.address)}
-                              className="p-2 text-gray-400 hover:text-gray-600"
-                              title="Copy Address"
-                            >
-                              <DocumentDuplicateIcon className="h-5 w-5" />
-                            </button>
-                            
-                            <button
-                              onClick={async () => {
-                                const token = localStorage.getItem('swiftpay_token')
-                                if (!token) {
-                                  toast.error('Please log in to create payment links')
-                                  return
-                                }
-                                setCreatingLinkFor(wallet.id)
-                                try {
-                                  const result = await backendAPI.paymentRequests.create('1', wallet.currency)
-                                  if (result.success && result.data?.checkoutUrl) {
-                                    const url = result.data.checkoutUrl as string
-                                    console.log('Payment link:', url)
-                                    await copyToClipboardSafe(url)
-                                    try { window.open(url, '_blank', 'noopener') } catch {}
-                                  } else {
-                                    toast.error(result.error || 'Failed to create link')
-                                  }
-                                } catch (err: any) {
-                                  console.error('Create payment link error:', err)
-                                  toast.error(err.message || 'Failed to create link')
-                                } finally {
-                                  setCreatingLinkFor(null)
-                                }
-                              }}
-                              className="p-2 text-gray-400 hover:text-gray-600"
-                              title="Create Payment Link"
-                            >
-                              <LinkIcon className="h-5 w-5" />
-                            </button>
-
-                            <button
-                              onClick={() => setShowQRCode(showQRCode === wallet.id ? null : wallet.id)}
-                              className="p-2 text-gray-400 hover:text-gray-600"
-                              title="Show QR Code"
-                            >
-                              <QrCodeIcon className="h-5 w-5" />
-                            </button>
-                            
-                            <button
-                              onClick={() => deleteWallet(wallet.id)}
-                              className="p-2 text-red-400 hover:text-red-600"
-                              title="Delete Wallet"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
+                                   <button onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)} className="p-2 text-gray-400 hover:text-gray-600" title="Toggle Details">
+                                     {expandedWallet === wallet.id ? (<EyeSlashIcon className="h-5 w-5" />) : (<EyeIcon className="h-5 w-5" />)}
+                                   </button>
+                                   <button onClick={() => copyToClipboard(wallet.address)} className="p-2 text-gray-400 hover:text-gray-600" title="Copy Address">
+                                     <DocumentDuplicateIcon className="h-5 w-5" />
+                                   </button>
+                                   <button onClick={() => setShowQRCode(showQRCode === wallet.id ? null : wallet.id)} className="p-2 text-gray-400 hover:text-gray-600" title="Show QR Code">
+                                     <QrCodeIcon className="h-5 w-5" />
+                                   </button>
+                                   <button onClick={() => deleteWallet(wallet.id)} className="p-2 text-red-400 hover:text-red-600" title="Delete Wallet">
+                                     <TrashIcon className="h-5 w-5" />
+                                   </button>
                           </div>
                         </div>
                       </div>
