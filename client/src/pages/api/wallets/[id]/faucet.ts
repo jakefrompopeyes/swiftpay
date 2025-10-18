@@ -27,21 +27,8 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         });
       }
 
-      // Request real faucet from Coinbase CDP
-      const { coinbaseCloudService } = await import('../../../../lib/coinbase-cloud');
-      const faucetResult = await coinbaseCloudService.requestFaucet(wallet.address, wallet.network, token);
-
-      res.json({
-        success: true,
-        data: {
-          address: wallet.address,
-          amount: faucetResult.amount,
-          currency: wallet.currency,
-          network: wallet.network,
-          txHash: faucetResult.txHash,
-          message: `Faucet request successful for ${wallet.currency}`
-        }
-      });
+      // BYO mode: faucet unsupported
+      res.json({ success: false, error: 'Faucet is unavailable in BYO mode. Use public testnet faucets.' });
     } catch (error: any) {
       console.error('Faucet request error:', error);
       res.status(500).json({
