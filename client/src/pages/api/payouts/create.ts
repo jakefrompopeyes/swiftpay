@@ -54,23 +54,10 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
 
       if (!wallet) return res2.status(400).json({ success: false, error: 'No source wallet for this network' })
 
-      // Use CDP bridge to send
-      let txHash: string | null = null
-      try {
-        const bridge = await import('../../../lib/cdp-bridge.mjs')
-        const result: any = await bridge.sendTransaction(wallet.address, toAddress, tokenAmount, currency, network)
-        txHash = result?.txHash || null
-      } catch (e) {
-        await supabaseAdmin.from('payouts').update({ status: 'failed' }).eq('id', payout.id)
-        return res2.status(500).json({ success: false, error: 'Transfer failed' })
-      }
-
-      await supabaseAdmin
-        .from('payouts')
-        .update({ status: 'completed', tx_hash: txHash || null, updated_at: new Date().toISOString() })
-        .eq('id', payout.id)
-
-      return res2.json({ success: true, data: { id: payout.id, txHash } })
+      // BYO mode: we do not sign or send on-chain payouts server-side.
+      // Record the payout request; merchants should transfer manually from their wallet.
+      await supabaseAdmin.from('payouts').update({ status: 'pending', updated_at: new Date().toISOString() }).eq('id', payout.id)
+      return res2.json({ success: true, data: { id: payout.id, message: 'Payout recorded. Please send manually from your wallet.' } })
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('Payout create error:', e)
