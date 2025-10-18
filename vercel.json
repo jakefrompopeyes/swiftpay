@@ -1,28 +1,16 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/monitor",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
-
-{
   "version": 2,
   "builds": [
-    {
-      "src": "client/package.json",
-      "use": "@vercel/next"
-    }
+    { "src": "client/package.json", "use": "@vercel/next" }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "client/$1"
-    }
+    { "src": "/(.*)", "dest": "client/$1" }
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://swiftpay-api.vercel.app"
-  }
+  },
+  "crons": [
+    { "path": "/api/cron/monitor", "schedule": "*/5 * * * *" }
+  ]
 }
 

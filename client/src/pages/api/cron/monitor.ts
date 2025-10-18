@@ -84,7 +84,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const bearer = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined
   const querySecret = typeof req.query.secret === 'string' ? (req.query.secret as string) : undefined
   const provided = headerSecret || bearer || querySecret
-  if (!provided || provided !== (process.env.CRON_SECRET || '')) return res.status(401).json({ success: false, error: 'Unauthorized' })
+  if ((process.env.CRON_SECRET || '') && (!provided || provided !== process.env.CRON_SECRET)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' })
+  }
 
   try {
     const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
