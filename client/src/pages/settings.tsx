@@ -239,7 +239,14 @@ export default function SettingsPage() {
                         <div className="text-sm font-medium">{w.network} {w.currency ? `• ${w.currency}` : ''}</div>
                         <div className="text-xs font-mono text-gray-500">{w.address}</div>
                       </div>
-                      <span className="text-xs px-2 py-1 bg-gray-100 rounded">Custom</span>
+                      <div className="flex items-center space-x-2">
+                        <button onClick={async()=>{
+                          try{ const token=localStorage.getItem('swiftpay_token'); await fetch(`/api/settings/wallets-custom?id=${w.id}`,{ method:'DELETE', headers:{ Authorization:`Bearer ${token}` } }); setCustomWallets(list=>list.filter(x=>x.id!==w.id)) }catch{}
+                        }} className="text-xs px-2 py-1 bg-rose-100 text-rose-700 rounded">Delete</button>
+                        <button onClick={async()=>{
+                          try{ const token=localStorage.getItem('swiftpay_token'); await fetch('/api/settings/wallets-custom',{ method:'PATCH', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify({ id:w.id, is_active: !w.is_active }) }); setCustomWallets(list=>list.map(x=> x.id===w.id? { ...x, is_active: !x.is_active }: x)) }catch{}
+                        }} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{w.is_active? 'Deactivate':'Activate'}</button>
+                      </div>
                     </div>
                   ))}
                 </div>

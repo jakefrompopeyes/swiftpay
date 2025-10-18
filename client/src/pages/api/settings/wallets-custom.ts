@@ -43,6 +43,26 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         return res.json({ success: true, data })
       }
 
+      if (req.method === 'DELETE') {
+        const { id } = (req.query || {}) as any
+        if (!id || typeof id !== 'string') return res.status(400).json({ success: false, error: 'Missing id' })
+        const { error } = await supabaseAdmin.from('wallets').delete().eq('id', id).eq('user_id', userId)
+        if (error) return res.status(500).json({ success: false, error: 'Failed to delete wallet' })
+        return res.json({ success: true })
+      }
+
+      if (req.method === 'PATCH') {
+        const { id, is_active } = req.body || {}
+        if (!id) return res.status(400).json({ success: false, error: 'Missing id' })
+        const { error } = await supabaseAdmin
+          .from('wallets')
+          .update({ is_active: Boolean(is_active) })
+          .eq('id', id)
+          .eq('user_id', userId)
+        if (error) return res.status(500).json({ success: false, error: 'Failed to update wallet' })
+        return res.json({ success: true })
+      }
+
       return res.status(405).json({ success: false, error: 'Method not allowed' })
     } catch (e) {
       return res.status(500).json({ success: false, error: 'Internal server error' })
