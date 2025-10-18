@@ -65,6 +65,16 @@ export default function PayRequest() {
       return `ethereum:${token.address}${atChain}/transfer?address=${address}&uint256=${units}`
     }
 
+    // Bitcoin / Monero / native ETH-like
+    const net = (network || '').toLowerCase()
+    if (net === 'bitcoin') {
+      // BIP21 URI
+      return `bitcoin:${address}?amount=${amount}`
+    }
+    if (net === 'monero') {
+      // Monero URI (amount in XMR)
+      return `monero:${address}?tx_amount=${amount}`
+    }
     const atChain = chainId ? `@${chainId}` : ''
     const wei = toBaseUnits(amount, 18)
     return `ethereum:${address}${atChain}?value=${wei}`

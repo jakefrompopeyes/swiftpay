@@ -32,8 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
-    // Fetch merchant wallets (only real CDP-backed networks)
-    const allowedNetworks = ['ethereum','solana','binance','polygon','base','arbitrum']
+    // Fetch merchant wallets (BYO): include Bitcoin and Monero if provided
+    const allowedNetworks = ['ethereum','solana','binance','polygon','base','arbitrum','bitcoin','monero']
     const { data: wallets, error: wErr } = await supabaseAdmin
       .from('wallets')
       .select('id, address, network, currency, is_active')
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
-    // Expand token options (USDC/USDT/DAI) for each wallet where supported
+    // Expand token options (USDC/USDT/DAI) for each wallet where supported (EVM/Solana only)
     const expanded = (wallets || []).flatMap((w: any) => {
       const base = [{ ...w }]
       const net = (w.network || '').toLowerCase()

@@ -9,6 +9,8 @@ function validate(network: string, address: string): boolean {
   const n = (network || '').toLowerCase()
   if (['ethereum','polygon','base','arbitrum','binance','optimism','avalanche','fantom'].includes(n)) return evmAddressRe.test(address)
   if (n === 'solana') return solAddressRe.test(address)
+  if (n === 'bitcoin') return /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) || address.startsWith('bc1')
+  if (n === 'monero') return /^4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}$/.test(address)
   return false
 }
 
@@ -44,7 +46,9 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           binance: 'BNB',
           avalanche: 'AVAX',
           fantom: 'FTM',
-          solana: 'SOL'
+          solana: 'SOL',
+          bitcoin: 'BTC',
+          monero: 'XMR'
         }
         const normalizedCurrency = (String(currency || '').trim() || currencyDefaultMap[n] || '').toUpperCase() || null
 

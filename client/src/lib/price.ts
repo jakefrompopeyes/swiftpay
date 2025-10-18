@@ -6,6 +6,7 @@ const CACHE_TTL_MS = 60_000 // 60s
 const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
+  XMR: 'monero',
   USDC: 'usd-coin',
   USDT: 'tether',
   DAI: 'dai',
@@ -56,6 +57,7 @@ export async function getPrice(symbol: string): Promise<number> {
   const defaults: Record<string, number> = {
     BTC: 45000,
     ETH: 2800,
+    XMR: 150,
     USDC: 1,
     USDT: 1,
     DAI: 1,
