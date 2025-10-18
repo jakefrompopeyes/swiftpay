@@ -110,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isExpired = new Date(p.created_at).toISOString() < fiveMinutesAgo
       const txHash = p.method_selected ? await checkOnChain(p) : null
       if (txHash) {
-        await supabaseAdmin.from('payment_requests').update({ status:'completed', transaction_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
+        await supabaseAdmin.from('payment_requests').update({ status:'completed', tx_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
         completed++
         continue
       }

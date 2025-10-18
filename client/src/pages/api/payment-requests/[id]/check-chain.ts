@@ -219,13 +219,9 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
 
       const { data: updatedPayment, error: updateError } = await supabaseAdmin
         .from('payment_requests')
-        .update({
-          status: 'completed',
-          transaction_hash: foundTxHash,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: 'completed', tx_hash: foundTxHash, updated_at: new Date().toISOString() })
         .eq('id', paymentId)
-        .select('id, status, transaction_hash')
+        .select('id, status, tx_hash')
         .single();
 
       if (updateError) {
@@ -236,7 +232,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       return res.json({
         success: true,
         message: 'Payment confirmed on chain',
-        data: { paymentId: updatedPayment.id, status: updatedPayment.status, transactionHash: updatedPayment.transaction_hash }
+        data: { paymentId: updatedPayment.id, status: updatedPayment.status, transactionHash: updatedPayment.tx_hash }
       })
 
     } catch (error: any) {
