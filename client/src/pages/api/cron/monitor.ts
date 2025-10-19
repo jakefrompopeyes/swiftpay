@@ -93,11 +93,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fiveMinutesAgo = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
 
     // Bulk expire first to ensure old items flip even if chain checks fail
-    await supabaseAdmin
+    const { error: bulkErr } = await supabaseAdmin
       .from('payment_requests')
       .update({ status: 'failed', updated_at: new Date().toISOString() })
       .filter('status', 'ilike', 'pending')
       .lt('created_at', fiveMinutesAgo)
+    if (bulkErr) {
+      console.error('Cron bulk expire error:', bulkErr)
+    }
 
     const { data: pendings, error } = await supabaseAdmin
       .from('payment_requests')
@@ -105,24 +108,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .ilike('status', 'pending')
       .lte('created_at', new Date().toISOString())
       .order('created_at', { ascending: false })
-    if (error) return res.status(500).json({ success: false, error: 'Failed to load pending' })
+    if (error) return res.status(500).json({ success: false, error: 'Failed to load pending', details: error.message })
 
     let completed = 0, failed = 0
     for (const p of pendings || []) {
       const isExpired = new Date(p.created_at).toISOString() < fiveMinutesAgo
       const txHash = p.method_selected ? await checkOnChain(p) : null
       if (txHash) {
-        await supabaseAdmin.from('payment_requests').update({ status:'completed', tx_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
+        const { error: upCompErr } = await supabaseAdmin.from('payment_requests').update({ status:'completed', tx_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
+        if (upCompErr) console.error('Cron complete update error:', upCompErr)
         completed++
         continue
       }
       if (isExpired) {
-        await supabaseAdmin.from('payment_requests').update({ status:'failed', updated_at: new Date().toISOString() }).eq('id', p.id)
+        const { error: upFailErr } = await supabaseAdmin.from('payment_requests').update({ status:'failed', updated_at: new Date().toISOString() }).eq('id', p.id)
+        if (upFailErr) console.error('Cron fail update error:', upFailErr)
         failed++
       }
     }
 
-    return res.json({ success: true, data: { scanned: (pendings || []).length, completed, failed } })
+    return res.json({ success: true, data: { scanned: (pendings || []).length, completed, failed, expireMinutes } })
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('Cron monitor error:', e)
