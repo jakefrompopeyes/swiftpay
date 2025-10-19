@@ -32,6 +32,11 @@ export default function PayRequest() {
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(60)
   const [lastPriceTs, setLastPriceTs] = useState<number | null>(null)
   const stableSet = new Set(['USDC','USDT','DAI'])
+  // Price lock (defaults to 120s, configurable via NEXT_PUBLIC_PRICE_LOCK_SEC)
+  const [lockDurationSec] = useState<number>(parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '120'), 10))
+  const [lockUntil, setLockUntil] = useState<number | null>(null)
+  const [lockLeftSec, setLockLeftSec] = useState<number>(0)
+  const [lockedPrice, setLockedPrice] = useState<number | null>(null)
 
   const formatAmount = (n: number | null | undefined) => {
     const v = typeof n === 'number' ? n : parseFloat(String(n ?? '0'))
@@ -191,6 +196,14 @@ export default function PayRequest() {
     const price = prices[symbol as string] || 0
     const amountToPay = usdAmount && price > 0 ? usdAmount / price : data.amount
     setCurrentAmount(amountToPay)
+    // start a new price lock window
+    if (price > 0) {
+      setLockedPrice(price)
+      setLockUntil(Date.now() + lockDurationSec * 1000)
+    } else {
+      setLockedPrice(null)
+      setLockUntil(null)
+    }
     const uri = buildPaymentUri(wallet.network, wallet.address, amountToPay, wallet.currency)
     setQr(await QRCode.toDataURL(uri))
 
@@ -287,10 +300,26 @@ export default function PayRequest() {
           if (wallet) {
             const selSymbol = (wallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : wallet.currency?.toUpperCase?.()
             const selPrice = newPrices[selSymbol as string] || 0
-            const amt = (usd != null && selPrice > 0) ? usd / selPrice : data.amount
+            // Respect price lock while active
+            const now = Date.now()
+            let effectivePrice = selPrice
+            if (lockUntil && now < lockUntil && lockedPrice) {
+              effectivePrice = lockedPrice
+            }
+            const amt = (usd != null && effectivePrice > 0) ? usd / effectivePrice : data.amount
             setCurrentAmount(amt)
             const uri = buildPaymentUri(wallet.network, wallet.address, amt, wallet.currency)
             setQr(await QRCode.toDataURL(uri))
+            // If lock expired, start a new lock window using the latest price
+            if (!lockUntil || now >= lockUntil) {
+              if (selPrice > 0) {
+                setLockedPrice(selPrice)
+                setLockUntil(now + lockDurationSec * 1000)
+              } else {
+                setLockedPrice(null)
+                setLockUntil(null)
+              }
+            }
           }
         }
       }
@@ -300,6 +329,8 @@ export default function PayRequest() {
   useEffect(() => {
     // countdown and periodic refresh
     setNextRefreshIn(refreshIntervalSec)
+    // initialize lock countdown
+    if (lockUntil) setLockLeftSec(Math.max(0, Math.floor((lockUntil - Date.now()) / 1000)))
     const tick = setInterval(() => {
       setNextRefreshIn((prev) => {
         if (prev <= 1) {
@@ -309,10 +340,15 @@ export default function PayRequest() {
         }
         return prev - 1
       })
+      // lock countdown
+      setLockLeftSec((prev) => {
+        const nowLeft = lockUntil ? Math.max(0, Math.floor((lockUntil - Date.now()) / 1000)) : 0
+        return nowLeft
+      })
     }, 1000)
     return () => clearInterval(tick)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshIntervalSec, selectedWallet, data?.id])
+  }, [refreshIntervalSec, selectedWallet, data?.id, lockUntil])
 
   return (
     <>
@@ -482,12 +518,10 @@ export default function PayRequest() {
                       {lastPriceTs && (
                         <span className="ml-2">• Last updated {Math.max(0, Math.floor((Date.now() - lastPriceTs) / 1000))}s ago</span>
                       )}
-                      <button
-                        onClick={refreshPricesAndQR}
-                        className="ml-2 underline text-indigo-600 hover:text-indigo-800"
-                      >
-                        Refresh now
-                      </button>
+                      <button onClick={refreshPricesAndQR} className="ml-2 underline text-indigo-600 hover:text-indigo-800">Refresh now</button>
+                      {lockUntil && (
+                        <span className="ml-2 font-medium text-gray-700">• Price lock: {lockLeftSec}s</span>
+                      )}
                     </div>
                     {usdAmount != null && (
                       <p className="text-sm text-gray-500">≈ ${usdAmount.toFixed(2)} USD</p>

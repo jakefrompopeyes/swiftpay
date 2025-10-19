@@ -219,13 +219,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('payment_requests')
         .update({ status: 'completed', tx_hash: foundTxHash, updated_at: new Date().toISOString() })
         .eq('id', paymentId)
-        .select('id, status, tx_hash')
+        .select('id, user_id, status, amount, currency, network, to_address, tx_hash, created_at')
         .single();
 
       if (updateError) {
         console.error('Error updating payment status:', updateError);
         return res.status(500).json({ success: false, error: 'Failed to update payment status' });
       }
+
+      // Best-effort webhook fire (signed with vendor API key)
+      try {
+        await fetch('/api/webhooks/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId }) })
+      } catch {}
 
       return res.json({
         success: true,

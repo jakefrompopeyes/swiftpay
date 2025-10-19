@@ -127,9 +127,12 @@ export default function MerchantLinks() {
                       <button className="inline-flex items-center px-2 py-1 border rounded text-sm mr-2" onClick={() => openLink(pr.id)}>
                         <LinkIcon className="h-4 w-4 mr-1"/> Open
                       </button>
-                      <button className="inline-flex items-center px-2 py-1 border rounded text-sm" onClick={() => openLink(pr.id)}>
+                      <button className="inline-flex items-center px-2 py-1 border rounded text-sm mr-2" onClick={() => openLink(pr.id)}>
                         <QrCodeIcon className="h-4 w-4 mr-1"/> QR
                       </button>
+                      <button className="inline-flex items-center px-2 py-1 border rounded text-sm" onClick={async()=>{
+                        try{ const token=localStorage.getItem('swiftpay_token'); if(!token) return; await fetch('/api/webhooks/resend',{ method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify({ paymentId: pr.id }) }); alert('Webhook resend triggered'); }catch{}
+                      }}>Resend Webhook</button>
                     </td>
                   </tr>
                 ))}
