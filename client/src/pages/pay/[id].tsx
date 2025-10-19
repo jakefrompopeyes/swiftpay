@@ -33,6 +33,12 @@ export default function PayRequest() {
   const [lastPriceTs, setLastPriceTs] = useState<number | null>(null)
   const stableSet = new Set(['USDC','USDT','DAI'])
 
+  const formatAmount = (n: number | null | undefined) => {
+    const v = typeof n === 'number' ? n : parseFloat(String(n ?? '0'))
+    if (!Number.isFinite(v)) return '0'
+    return v.toFixed(6).replace(/\.0+$|(?<=\.[0-9]*?)0+$/g, '')
+  }
+
   const getEvmChainId = (network: string | undefined | null): number | null => {
     switch ((network || '').toLowerCase()) {
       case 'ethereum': return 1
@@ -230,19 +236,27 @@ export default function PayRequest() {
   // whenever prices and initial data are available, compute usd amount and default currentAmount
   useEffect(() => {
     if (!data || !prices || Object.keys(prices).length === 0) return
-    const baseSymbol = (data.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : data.currency?.toUpperCase?.()
-    const price = prices[baseSymbol as string] || 0
-    if (price > 0) {
-      const usd = parseFloat(String(data.amount)) * price
-      setUsdAmount(usd)
-      if (selectedWallet) {
-        const selSymbol = (selectedWallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : selectedWallet.currency?.toUpperCase?.()
-        const selPrice = prices[selSymbol as string] || 0
-        const amt = selPrice > 0 ? usd / selPrice : data.amount
-        setCurrentAmount(amt)
-      } else {
-        setCurrentAmount(data.amount)
-      }
+    const baseSymRaw = data.currency?.toUpperCase?.()
+    const baseSymbol = baseSymRaw === 'POL' ? 'MATIC' : baseSymRaw
+    let usd = 0
+    if (baseSymbol === 'USD') {
+      usd = parseFloat(String(data.amount))
+    } else if (stableSet.has(baseSymbol || '')) {
+      usd = parseFloat(String(data.amount)) // treat stables as $1
+    } else {
+      const price = prices[baseSymbol as string] || 0
+      usd = price > 0 ? parseFloat(String(data.amount)) * price : 0
+    }
+    if (usd > 0) setUsdAmount(usd)
+    if (selectedWallet && usd > 0) {
+      const selSymbol = (selectedWallet.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : selectedWallet.currency?.toUpperCase?.()
+      const selPrice = prices[selSymbol as string] || 0
+      const amt = selPrice > 0 ? usd / selPrice : parseFloat(String(data.amount))
+      setCurrentAmount(amt)
+    } else if (selectedWallet) {
+      setCurrentAmount(parseFloat(String(data.amount)))
+    } else {
+      setCurrentAmount(parseFloat(String(data.amount)))
     }
   }, [data, prices, selectedWallet])
 
@@ -256,9 +270,17 @@ export default function PayRequest() {
         setPrices(newPrices)
         setLastPriceTs(Date.now())
         if (data) {
-          const baseSymbol = (data.currency?.toUpperCase?.() === 'POL') ? 'MATIC' : data.currency?.toUpperCase?.()
-          const basePrice = newPrices[baseSymbol as string] || 0
-          const usd = basePrice > 0 ? parseFloat(String(data.amount)) * basePrice : null
+          const baseSymRaw = data.currency?.toUpperCase?.()
+          const baseSymbol = baseSymRaw === 'POL' ? 'MATIC' : baseSymRaw
+          let usd: number | null = null
+          if (baseSymbol === 'USD') {
+            usd = parseFloat(String(data.amount))
+          } else if (stableSet.has(baseSymbol || '')) {
+            usd = parseFloat(String(data.amount))
+          } else {
+            const basePrice = newPrices[baseSymbol as string] || 0
+            usd = basePrice > 0 ? parseFloat(String(data.amount)) * basePrice : null
+          }
           if (usd != null) setUsdAmount(usd)
 
           const wallet = selectedWallet
@@ -453,7 +475,7 @@ export default function PayRequest() {
                 <div className="bg-white rounded-2xl shadow-lg p-6">
                   <div className="text-center mb-6">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                      Pay { (currentAmount ?? data.amount).toString() } { selectedWallet?.currency || data.currency }
+                      Pay { formatAmount(currentAmount ?? (data.amount as number)) } { selectedWallet?.currency || data.currency }
                     </h1>
                     <div className="text-xs text-gray-500 mb-1">
                       Price auto-refresh in {nextRefreshIn}s
