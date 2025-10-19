@@ -212,7 +212,29 @@ export default function SettingsPage() {
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-900">Recent Deliveries</h3>
-                    <button onClick={loadDeliveries} className="text-xs px-2 py-1 border rounded">Refresh</button>
+                    <div className="flex items-center space-x-2">
+                      <input id="wh_filter_payment" placeholder="payment id" className="px-2 py-1 border rounded text-xs" />
+                      <select id="wh_filter_success" className="px-2 py-1 border rounded text-xs">
+                        <option value="">All</option>
+                        <option value="true">Delivered</option>
+                        <option value="false">Failed</option>
+                      </select>
+                      <input id="wh_filter_from" type="datetime-local" className="px-2 py-1 border rounded text-xs" />
+                      <input id="wh_filter_to" type="datetime-local" className="px-2 py-1 border rounded text-xs" />
+                      <button onClick={async()=>{
+                        try{
+                          const token=localStorage.getItem('swiftpay_token');
+                          const pid=(document.getElementById('wh_filter_payment') as HTMLInputElement).value
+                          const succ=(document.getElementById('wh_filter_success') as HTMLSelectElement).value
+                          const from=(document.getElementById('wh_filter_from') as HTMLInputElement).value
+                          const to=(document.getElementById('wh_filter_to') as HTMLInputElement).value
+                          const params=new URLSearchParams(); if(pid) params.set('paymentId',pid); if(succ) params.set('success',succ); if(from) params.set('from',new Date(from).toISOString()); if(to) params.set('to',new Date(to).toISOString());
+                          const r=await fetch(`/api/webhooks/list?${params.toString()}`,{ headers:{ Authorization:`Bearer ${token}` }, cache:'no-store' });
+                          const j=await r.json(); if(j?.success) setDeliveries(j.data||[])
+                        }catch{}
+                      }} className="text-xs px-2 py-1 border rounded">Apply</button>
+                      <button onClick={loadDeliveries} className="text-xs px-2 py-1 border rounded">Refresh</button>
+                    </div>
                   </div>
                   <div className="border rounded-md divide-y">
                     {loadingDeliveries ? (
