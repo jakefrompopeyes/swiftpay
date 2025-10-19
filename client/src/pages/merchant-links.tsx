@@ -71,8 +71,14 @@ export default function MerchantLinks() {
                 try {
                   const token = localStorage.getItem('swiftpay_token')
                   if (!token) return
-                  await fetch('/api/payment-requests/expire-stale', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
-                  fetchLinks()
+                  const r = await fetch('/api/payment-requests/expire-stale', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+                  const j = await r.json().catch(() => null)
+                  if (j?.success) {
+                    console.log('Expired pending:', j?.data?.expired)
+                  } else {
+                    console.warn('Expire endpoint failed', j)
+                  }
+                  await fetchLinks()
                 } catch {}
               }}
               className="px-3 py-2 border rounded-md text-sm"

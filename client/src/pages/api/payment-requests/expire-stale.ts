@@ -15,17 +15,19 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
       const threshold = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
 
-      const { error } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('payment_requests')
         .update({ status: 'failed', updated_at: new Date().toISOString() })
         .eq('user_id', req.user!.id)
-        .eq('status', 'pending')
+        .filter('status', 'ilike', 'pending')
         .lt('created_at', threshold)
+        .select('id')
 
       if (error) {
-        return res.status(500).json({ success: false, error: 'Failed to expire pending links' })
+        return res.status(500).json({ success: false, error: error.message || 'Failed to expire pending links' })
       }
-      return res.json({ success: true })
+      const expired = Array.isArray(data) ? data.length : 0
+      return res.json({ success: true, data: { expired, expireMinutes } })
     } catch (e) {
       return res.status(500).json({ success: false, error: 'Internal server error' })
     }
