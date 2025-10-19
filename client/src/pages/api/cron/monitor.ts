@@ -76,7 +76,10 @@ async function checkOnChain(payment: any): Promise<string | null> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Allow GET or POST so Vercel Cron can trigger without custom method/body
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ success: false, error: 'Method not allowed' })
-  if (!supabaseAdmin) return res.status(500).json({ success: false, error: 'Database not configured' })
+  if (!supabaseAdmin) {
+    console.error('Cron monitor: Supabase not configured - missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+    return res.status(500).json({ success: false, error: 'Database not configured - check Supabase environment variables' })
+  }
 
   // Accept either header or query fallback for Vercel Cron
   const headerSecret = req.headers['x-cron-secret'] as string | undefined

@@ -87,7 +87,26 @@ export default function MerchantLinks() {
             >
               Expire Old Pending
             </button>
-          </div>
+            <button
+              onClick={async () => {
+                try {
+                  const r = await fetch('/api/payment-requests/expire-manual', { method: 'POST' })
+                  const j = await r.json().catch(() => null)
+                  if (j?.success) {
+                    console.log('Manual expiry result:', j?.data)
+                    alert(`Expired ${j?.data?.expired || 0} payments (${j?.data?.totalPending || 0} total pending)`)
+                    await fetchLinks(); await fetchRecent()
+                  } else {
+                    alert(`Error: ${j?.error || 'Unknown error'}`)
+                  }
+                } catch (e) {
+                  alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+                }
+              }}
+              className="px-3 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700"
+            >
+              Force Expire (No Auth)
+            </button>
         </div>
 
         {loading ? (
