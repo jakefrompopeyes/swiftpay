@@ -17,6 +17,9 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
+  // Force fresh data for dashboard widgets
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+
   const header = (req.headers['authorization'] || req.headers['x-api-key']) as string | undefined;
   const apiKey = header?.startsWith('Bearer ') ? header.slice(7) : header;
   if (apiKey && apiKey.startsWith('sk_')) {

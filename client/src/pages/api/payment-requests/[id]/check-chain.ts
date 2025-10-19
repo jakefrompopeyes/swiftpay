@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../lib/supabase-server';
-import { authenticateToken, AuthRequest } from '../../../../lib/auth-middleware';
 import { getTokenInfo, toBaseUnits } from '../../../../lib/tokens'
 
 // Simple process-local throttle for Solana RPC to respect ~10 rps limits
@@ -19,18 +18,17 @@ async function throttleSolanaRpc() {
 // This would typically be called by a background job or cron service
 // For now, we'll create a simple endpoint that can be called manually
 
-export default function handler(req: AuthRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  return authenticateToken(req, res, async () => {
-    try {
+  try {
       if (!supabaseAdmin) {
         return res.status(500).json({ success: false, error: 'Database not configured' });
       }
 
-      const { paymentId } = req.body;
+      const { paymentId } = req.body as any;
 
       if (!paymentId) {
         return res.status(400).json({ 
@@ -42,7 +40,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       // Get the payment request
       const { data: payment, error: fetchError } = await supabaseAdmin
         .from('payment_requests')
-        .select('id, user_id, to_address, amount, currency, network, status')
+        .select('id, user_id, to_address, amount, currency, network, status, created_at')
         .eq('id', paymentId)
         .single();
 
@@ -64,7 +62,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       // Expire if older than configured window
       const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
       const cutoff = Date.now() - expireMinutes * 60 * 1000
-      const createdMs = new Date(payment.created_at as any).getTime()
+      const createdMs = new Date((payment as any).created_at as any).getTime()
       if (createdMs < cutoff) {
         const { data: expired, error: expErr } = await supabaseAdmin
           .from('payment_requests')
@@ -235,14 +233,13 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
         data: { paymentId: updatedPayment.id, status: updatedPayment.status, transactionHash: updatedPayment.tx_hash }
       })
 
-    } catch (error: any) {
-      console.error('Chain monitoring error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
-    }
-  });
+  } catch (error: any) {
+    console.error('Chain monitoring error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
 }
 
 // Example of how to integrate with real blockchain APIs:

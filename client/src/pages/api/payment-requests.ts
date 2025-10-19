@@ -62,6 +62,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     return authenticateToken(req, res, async () => {
       try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
         // Expire old pendings before returning
         const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
         const threshold = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()

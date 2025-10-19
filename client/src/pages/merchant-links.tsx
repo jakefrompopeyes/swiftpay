@@ -26,23 +26,25 @@ export default function MerchantLinks() {
     try {
       const res = await backendAPI.paymentRequests.list()
       if (res.success) setItems(res.data)
+      else setItems([])
     } finally {
       setLoading(false)
     }
   }
 
+  const fetchRecent = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
+      if (!token) return
+      const r = await fetch('/api/merchant/stats', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      const j = await r.json()
+      if (j?.success) setRecent(j.data?.recentTransactions || [])
+    } catch {}
+  }
+
   useEffect(() => {
-    fetchLinks()
-    ;(async () => {
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('swiftpay_token') : null
-        if (!token) return
-        const r = await fetch('/api/merchant/stats', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-        const j = await r.json()
-        if (j?.success) setRecent(j.data?.recentTransactions || [])
-      } catch {}
-    })()
-    const id = setInterval(fetchLinks, 30000)
+    fetchLinks(); fetchRecent()
+    const id = setInterval(() => { fetchLinks(); fetchRecent() }, 30000)
     return () => clearInterval(id)
   }, [])
 
@@ -65,7 +67,7 @@ export default function MerchantLinks() {
             <p className="text-gray-600">View and manage your generated checkout links</p>
           </div>
           <div className="space-x-2">
-            <button onClick={fetchLinks} className="px-3 py-2 border rounded-md text-sm">Refresh</button>
+            <button onClick={() => { fetchLinks(); fetchRecent() }} className="px-3 py-2 border rounded-md text-sm">Refresh</button>
             <button
               onClick={async () => {
                 try {
@@ -78,7 +80,7 @@ export default function MerchantLinks() {
                   } else {
                     console.warn('Expire endpoint failed', j)
                   }
-                  await fetchLinks()
+                  await fetchLinks(); await fetchRecent()
                 } catch {}
               }}
               className="px-3 py-2 border rounded-md text-sm"
@@ -142,7 +144,7 @@ export default function MerchantLinks() {
           <div className="px-4 py-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
-              <button onClick={fetchLinks} className="px-2 py-1 text-xs border rounded-md">Refresh</button>
+              <button onClick={() => { fetchLinks(); fetchRecent() }} className="px-2 py-1 text-xs border rounded-md">Refresh</button>
             </div>
             {recent && recent.length > 0 ? (
               <div className="space-y-3">
