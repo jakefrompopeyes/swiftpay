@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { CogIcon, CheckCircleIcon, ArrowPathIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
+import { useMemo } from 'react'
 
 interface Settings {
   company_name?: string | null
@@ -26,6 +27,8 @@ export default function SettingsPage() {
   const [newKeyPlain, setNewKeyPlain] = useState<string | null>(null)
   const [testingWebhook, setTestingWebhook] = useState(false)
   const [webhookResult, setWebhookResult] = useState<string | null>(null)
+  const [deliveries, setDeliveries] = useState<Array<{id:string,payment_id:string,url:string,response_code:number|null,success:boolean,attempt_count:number,created_at:string,updated_at:string}>>([])
+  const [loadingDeliveries, setLoadingDeliveries] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -117,6 +120,16 @@ export default function SettingsPage() {
     } finally { setTestingWebhook(false) }
   }
 
+  const loadDeliveries = async () => {
+    try {
+      setLoadingDeliveries(true)
+      const token = localStorage.getItem('swiftpay_token')
+      const r = await fetch('/api/webhooks/list?limit=50', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      const j = await r.json(); if (j?.success) setDeliveries(j.data || [])
+    } catch {}
+    finally { setLoadingDeliveries(false) }
+  }
+
   return (
     <>
       <Head>
@@ -194,6 +207,29 @@ export default function SettingsPage() {
                   {webhookResult && <span className="text-xs text-gray-600">{webhookResult}</span>}
                 </div>
                 <p className="text-xs text-gray-500 mt-2">We'll sign events with HMAC SHA-256 using this secret.</p>
+
+                {/* Delivery log */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-900">Recent Deliveries</h3>
+                    <button onClick={loadDeliveries} className="text-xs px-2 py-1 border rounded">Refresh</button>
+                  </div>
+                  <div className="border rounded-md divide-y">
+                    {loadingDeliveries ? (
+                      <div className="p-3 text-sm text-gray-500">Loading…</div>
+                    ) : deliveries.length === 0 ? (
+                      <div className="p-3 text-sm text-gray-500">No deliveries</div>
+                    ) : deliveries.map((d)=> (
+                      <div key={d.id} className="p-3 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-mono">{d.payment_id}</div>
+                          <div className="text-xs text-gray-500">{new Date(d.created_at).toLocaleString()} • {d.response_code ?? '-'} • {d.url}</div>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${d.success? 'bg-green-100 text-green-700':'bg-rose-100 text-rose-700'}`}>{d.success? 'Delivered':'Failed'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </section>
 
               {/* Checkout Settings */}
