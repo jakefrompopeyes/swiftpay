@@ -73,11 +73,35 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
           .filter('status', 'ilike', 'pending')
           .lt('created_at', threshold)
 
-        const { data: paymentRequests, error } = await supabaseAdmin
+        // First read
+        let { data: paymentRequests, error } = await supabaseAdmin
           .from('payment_requests')
           .select('id, user_id, amount, currency, network, description, status, to_address, tx_hash, created_at, updated_at, method_selected')
           .eq('user_id', req.user!.id)
           .order('created_at', { ascending: false });
+
+        // As a safety net, lazy-expire any stale rows we still see pending
+        if (!error && Array.isArray(paymentRequests)) {
+          const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
+          const cutoff = Date.now() - expireMinutes * 60 * 1000
+          const staleIds = (paymentRequests || [])
+            .filter((p: any) => String(p.status) === 'pending' && p.created_at && new Date(p.created_at).getTime() < cutoff)
+            .map((p: any) => p.id)
+          if (staleIds.length > 0) {
+            await supabaseAdmin
+              .from('payment_requests')
+              .update({ status: 'failed', updated_at: new Date().toISOString() })
+              .in('id', staleIds)
+            // re-read
+            const reread = await supabaseAdmin
+              .from('payment_requests')
+              .select('id, user_id, amount, currency, network, description, status, to_address, tx_hash, created_at, updated_at, method_selected')
+              .eq('user_id', req.user!.id)
+              .order('created_at', { ascending: false })
+            paymentRequests = reread.data as any
+            error = reread.error as any
+          }
+        }
 
         if (error) {
           return res.status(500).json({
