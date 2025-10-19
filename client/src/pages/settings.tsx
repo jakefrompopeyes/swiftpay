@@ -196,6 +196,41 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500 mt-2">We'll sign events with HMAC SHA-256 using this secret.</p>
               </section>
 
+              {/* Checkout Settings */}
+              <section className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Checkout Settings</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price lock (seconds)</label>
+                    <input id="sp_price_lock_sec" type="number" min={30} step={10} defaultValue={parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '120'),10)} className="w-full px-3 py-2 border rounded-md" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Auto re-quote on expiry</label>
+                    <select id="sp_auto_requote" defaultValue={(process.env.NEXT_PUBLIC_AUTO_REQUOTE||'1')==='0'?'0':'1'} className="w-full px-3 py-2 border rounded-md">
+                      <option value="1">Enabled</option>
+                      <option value="0">Disabled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Under/overpay tolerance (%)</label>
+                    <input id="sp_tolerance_pct" type="number" min={0} step={0.1} defaultValue={parseFloat(String(process.env.NEXT_PUBLIC_TOLERANCE_PCT || '0'))} className="w-full px-3 py-2 border rounded-md" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <button onClick={() => {
+                    try {
+                      const lock = (document.getElementById('sp_price_lock_sec') as HTMLInputElement).value
+                      const auto = (document.getElementById('sp_auto_requote') as HTMLSelectElement).value
+                      const tol = (document.getElementById('sp_tolerance_pct') as HTMLInputElement).value
+                      localStorage.setItem('sp_price_lock_sec', String(parseInt(lock||'120')))
+                      localStorage.setItem('sp_auto_requote', auto==='1'?'1':'0')
+                      localStorage.setItem('sp_tolerance_pct', String(parseFloat(tol||'0')))
+                      alert('Saved. These apply to new checkout sessions.')
+                    } catch {}
+                  }} className="px-3 py-2 bg-indigo-600 text-white rounded-md">Save</button>
+                </div>
+              </section>
+
               {/* Branding */}
               <section className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Branding</h2>

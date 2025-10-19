@@ -33,10 +33,12 @@ export default function PayRequest() {
   const [lastPriceTs, setLastPriceTs] = useState<number | null>(null)
   const stableSet = new Set(['USDC','USDT','DAI'])
   // Price lock (defaults to 120s, configurable via NEXT_PUBLIC_PRICE_LOCK_SEC)
-  const [lockDurationSec] = useState<number>(parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '120'), 10))
+  const [lockDurationSec, setLockDurationSec] = useState<number>(parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '120'), 10))
   const [lockUntil, setLockUntil] = useState<number | null>(null)
   const [lockLeftSec, setLockLeftSec] = useState<number>(0)
   const [lockedPrice, setLockedPrice] = useState<number | null>(null)
+  const [autoRequote, setAutoRequote] = useState<boolean>((process.env.NEXT_PUBLIC_AUTO_REQUOTE || '1') !== '0')
+  const [tolerancePct, setTolerancePct] = useState<number>(parseFloat(String(process.env.NEXT_PUBLIC_TOLERANCE_PCT || '0')))
 
   const formatAmount = (n: number | null | undefined) => {
     const v = typeof n === 'number' ? n : parseFloat(String(n ?? '0'))
@@ -109,6 +111,15 @@ export default function PayRequest() {
 
   useEffect(() => {
     if (!id) return
+    // Load optional checkout settings from localStorage
+    try {
+      const lsLock = localStorage.getItem('sp_price_lock_sec')
+      const lsAuto = localStorage.getItem('sp_auto_requote')
+      const lsTol = localStorage.getItem('sp_tolerance_pct')
+      if (lsLock && !Number.isNaN(parseInt(lsLock))) setLockDurationSec(parseInt(lsLock))
+      if (lsAuto != null) setAutoRequote(lsAuto === '1')
+      if (lsTol && !Number.isNaN(parseFloat(lsTol))) setTolerancePct(parseFloat(lsTol))
+    } catch {}
     fetchWithRetry(`/api/payment-requests/${id}`)
       .then(async (j) => {
         if (j?.success) {
@@ -313,8 +324,13 @@ export default function PayRequest() {
             // If lock expired, start a new lock window using the latest price
             if (!lockUntil || now >= lockUntil) {
               if (selPrice > 0) {
-                setLockedPrice(selPrice)
-                setLockUntil(now + lockDurationSec * 1000)
+                if (autoRequote) {
+                  setLockedPrice(selPrice)
+                  setLockUntil(now + lockDurationSec * 1000)
+                } else {
+                  setLockedPrice(null)
+                  setLockUntil(null)
+                }
               } else {
                 setLockedPrice(null)
                 setLockUntil(null)
