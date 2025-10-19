@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
-      .select('status')
+      .select('status, created_at')
       .eq('id', id)
       .single()
 
@@ -30,7 +30,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
-    res.json({ success: true, data })
+    // Lazy-expire: if pending and older than window, flip to failed and return failed
+    if (String(data.status) === 'pending') {
+      const expireMinutes = Math.max(1, parseInt(String(process.env.PAYMENT_EXPIRE_MINUTES || '5'), 10))
+      const threshold = new Date(Date.now() - expireMinutes * 60 * 1000).toISOString()
+      if ((data as any).created_at && new Date((data as any).created_at).toISOString() < threshold) {
+        await supabaseAdmin
+          .from('payment_requests')
+          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', id)
+        return res.json({ success: true, data: { status: 'failed' } })
+      }
+    }
+    res.json({ success: true, data: { status: data.status } })
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Get payment status error:', err)

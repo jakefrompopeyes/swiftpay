@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     const { data, error } = await supabaseAdmin
       .from('payment_requests')
-      .select('id, user_id, amount, currency, network, description, status, to_address')
+      .select('id, user_id, amount, currency, network, description, status, to_address, created_at')
       .eq('id', id)
       .single()
 
@@ -43,7 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...data,
       currency: (data.currency || '').toUpperCase(),
       network: data.network,
-      to_address: data.to_address
+      to_address: data.to_address,
+      created_at: data.created_at
     }
     res.json({ success: true, data: normalized })
   } catch (err) {
