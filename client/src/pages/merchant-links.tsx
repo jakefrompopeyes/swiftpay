@@ -108,6 +108,7 @@ export default function MerchantLinks() {
               Force Expire (No Auth)
             </button>
         </div>
+        </div>
 
         {loading ? (
           <div className="h-40 flex items-center justify-center text-gray-500">Loading…</div>
