@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Bulk expire first to ensure old items flip even if chain checks fail
     const { error: bulkErr } = await supabaseAdmin
       .from('payment_requests')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .update({ status: 'failed' })
       .filter('status', 'ilike', 'pending')
       .lt('created_at', fiveMinutesAgo)
     if (bulkErr) {
@@ -118,13 +118,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isExpired = new Date(p.created_at).toISOString() < fiveMinutesAgo
       const txHash = p.method_selected ? await checkOnChain(p) : null
       if (txHash) {
-        const { error: upCompErr } = await supabaseAdmin.from('payment_requests').update({ status:'completed', tx_hash: txHash, updated_at: new Date().toISOString() }).eq('id', p.id)
+        const { error: upCompErr } = await supabaseAdmin.from('payment_requests').update({ status:'completed', tx_hash: txHash }).eq('id', p.id)
         if (upCompErr) console.error('Cron complete update error:', upCompErr)
         completed++
         continue
       }
       if (isExpired) {
-        const { error: upFailErr } = await supabaseAdmin.from('payment_requests').update({ status:'failed', updated_at: new Date().toISOString() }).eq('id', p.id)
+        const { error: upFailErr } = await supabaseAdmin.from('payment_requests').update({ status:'failed' }).eq('id', p.id)
         if (upFailErr) console.error('Cron fail update error:', upFailErr)
         failed++
       }

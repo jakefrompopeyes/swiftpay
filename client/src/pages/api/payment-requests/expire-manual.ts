@@ -53,10 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let expired: any[] | null = null
     const { data: expiredBulk, error: expireError } = await supabaseAdmin
       .from('payment_requests')
-      .update({ 
-        status: 'failed', 
-        updated_at: new Date().toISOString() 
-      })
+      .update({ status: 'failed' })
       .in('id', oldPayments.map((p: any) => p.id))
       .select('id')
 
@@ -65,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn('Manual expiry: bulk update failed, trying filtered update:', expireError)
       const { data: expiredFiltered, error: filteredErr } = await supabaseAdmin
         .from('payment_requests')
-        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .update({ status: 'failed' })
         .filter('status', 'ilike', 'pending')
         .lt('created_at', fiveMinutesAgo)
         .select('id')

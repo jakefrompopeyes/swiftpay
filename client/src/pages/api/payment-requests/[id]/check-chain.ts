@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (createdMs < cutoff) {
         const { data: expired, error: expErr } = await supabaseAdmin
           .from('payment_requests')
-          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .update({ status: 'failed' })
           .eq('id', paymentId)
           .select('id, status')
           .single()
@@ -232,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { data: updatedPayment, error: updateError } = await supabaseAdmin
         .from('payment_requests')
-        .update({ status: 'completed', tx_hash: foundTxHash, updated_at: new Date().toISOString() })
+        .update({ status: 'completed', tx_hash: foundTxHash })
         .eq('id', paymentId)
         .select('id, user_id, status, amount, currency, network, to_address, tx_hash, created_at')
         .single();
