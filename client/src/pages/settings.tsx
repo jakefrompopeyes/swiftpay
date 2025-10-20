@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [newKeyPlain, setNewKeyPlain] = useState<string | null>(null)
   const [testingWebhook, setTestingWebhook] = useState(false)
   const [webhookResult, setWebhookResult] = useState<string | null>(null)
-  const [deliveries, setDeliveries] = useState<Array<{id:string,payment_id:string,url:string,response_code:number|null,success:boolean,attempt_count:number,created_at:string,updated_at:string}>>([])
+  const [deliveries, setDeliveries] = useState<Array<{id:string,payment_id:string,url:string,response_code:number|null,success:boolean,attempt_count:number,created_at:string}>>([])
   const [loadingDeliveries, setLoadingDeliveries] = useState(false)
 
   useEffect(() => {

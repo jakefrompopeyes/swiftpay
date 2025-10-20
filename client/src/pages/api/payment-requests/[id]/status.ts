@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if ((data as any).created_at && new Date((data as any).created_at).toISOString() < threshold) {
         await supabaseAdmin
           .from('payment_requests')
-          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .update({ status: 'failed' })
           .eq('id', id)
         return res.json({ success: true, data: { status: 'failed' } })
       }

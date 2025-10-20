@@ -219,7 +219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (createdMs2 < failCutoff) {
           const { data: failedFast, error: failErr } = await supabaseAdmin
             .from('payment_requests')
-            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .update({ status: 'failed' })
             .eq('id', paymentId)
             .select('id, status')
             .single()

@@ -52,7 +52,7 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
       if (!findErr && stale && stale.length > 0) {
         await supabaseAdmin
           .from('payment_requests')
-          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .update({ status: 'failed' })
           .in('id', stale.map((s: any) => s.id))
       }
 

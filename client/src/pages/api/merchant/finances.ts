@@ -32,7 +32,7 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
       const threshold = new Date(Date.now() - 5 * 60 * 1000).toISOString()
       await supabaseAdmin
         .from('payment_requests')
-        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .update({ status: 'failed' })
         .eq('user_id', userId)
         .eq('status', 'pending')
         .lt('created_at', threshold)

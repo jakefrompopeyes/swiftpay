@@ -56,7 +56,7 @@ export default async function handler(req: AuthRequest, res: NextApiResponse) {
 
       // BYO mode: we do not sign or send on-chain payouts server-side.
       // Record the payout request; merchants should transfer manually from their wallet.
-      await supabaseAdmin.from('payouts').update({ status: 'pending', updated_at: new Date().toISOString() }).eq('id', payout.id)
+      await supabaseAdmin.from('payouts').update({ status: 'pending' }).eq('id', payout.id)
       return res2.json({ success: true, data: { id: payout.id, message: 'Payout recorded. Please send manually from your wallet.' } })
     } catch (e) {
       // eslint-disable-next-line no-console

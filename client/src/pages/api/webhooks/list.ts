@@ -10,7 +10,7 @@ export default function handler(req: AuthRequest, res: NextApiResponse) {
       const { success, limit = '50', paymentId, from, to } = (req.query || {}) as any
       let q = supabaseAdmin
         .from('webhook_deliveries')
-        .select('id, payment_id, url, response_code, success, attempt_count, created_at, updated_at')
+        .select('id, payment_id, url, response_code, success, attempt_count, created_at')
         .eq('user_id', req.user!.id)
         .order('created_at', { ascending: false })
         .limit(parseInt(String(limit), 10) || 50)
