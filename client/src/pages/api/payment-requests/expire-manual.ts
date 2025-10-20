@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Manual expiry: Found ${allPending?.length || 0} total pending payments`)
 
     // Find payments older than the threshold
-    const oldPayments = (allPending || []).filter(p => new Date(p.created_at).toISOString() < fiveMinutesAgo)
+    const oldPayments = (allPending || []).filter((p: any) => new Date(p.created_at).toISOString() < fiveMinutesAgo)
     
     if (oldPayments.length === 0) {
       console.log('Manual expiry: No payments older than threshold found')
