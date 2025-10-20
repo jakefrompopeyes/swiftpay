@@ -212,6 +212,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (!foundTxHash) {
+        // If no on-chain activity is found within a shorter window, proactively fail
+        const noActionFailMinutes = Math.max(1, parseInt(String(process.env.NO_ACTION_FAIL_MINUTES || '2'), 10))
+        const failCutoff = Date.now() - noActionFailMinutes * 60 * 1000
+        const createdMs2 = new Date((payment as any).created_at as any).getTime()
+        if (createdMs2 < failCutoff) {
+          const { data: failedFast, error: failErr } = await supabaseAdmin
+            .from('payment_requests')
+            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .eq('id', paymentId)
+            .select('id, status')
+            .single()
+          if (!failErr) {
+            return res.json({ success: true, message: 'No on-chain activity; auto-failed', data: { status: failedFast.status } })
+          }
+        }
         return res.json({ success: true, message: 'No matching transaction found', data: { status: 'pending' } })
       }
 
