@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         totalPending: allPending?.length || 0,
         expired: expired?.length || 0,
         expireMinutes,
-        expiredIds: expired?.map(e => e.id) || [],
+        expiredIds: expired?.map((e: any) => e.id) || [],
         message: `Successfully expired ${expired?.length || 0} payments`
       } 
     })
