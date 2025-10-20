@@ -33,12 +33,14 @@ export default function PayRequest() {
   const [lastPriceTs, setLastPriceTs] = useState<number | null>(null)
   const stableSet = new Set(['USDC','USDT','DAI'])
   // Price lock (defaults to 120s, configurable via NEXT_PUBLIC_PRICE_LOCK_SEC)
-  const [lockDurationSec, setLockDurationSec] = useState<number>(parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '120'), 10))
+  const [lockDurationSec, setLockDurationSec] = useState<number>(parseInt(String(process.env.NEXT_PUBLIC_PRICE_LOCK_SEC || '60'), 10))
   const [lockUntil, setLockUntil] = useState<number | null>(null)
   const [lockLeftSec, setLockLeftSec] = useState<number>(0)
   const [lockedPrice, setLockedPrice] = useState<number | null>(null)
   const [autoRequote, setAutoRequote] = useState<boolean>((process.env.NEXT_PUBLIC_AUTO_REQUOTE || '1') !== '0')
   const [tolerancePct, setTolerancePct] = useState<number>(parseFloat(String(process.env.NEXT_PUBLIC_TOLERANCE_PCT || '0')))
+  // Each QR carries a nonce so it can "expire" and be replaced
+  const [qrNonce, setQrNonce] = useState<string>(() => String(Date.now()))
 
   // Throttle chain checks so we don't spam the endpoint if QR updates rapidly
   const lastCheckAtRef = useRef<number>(0)
@@ -68,40 +70,41 @@ export default function PayRequest() {
     }
   }
 
-  const buildPaymentUri = (network: string, address: string, amount: number, currency: string) => {
+  const buildPaymentUri = (network: string, address: string, amount: number, currency: string, nonce?: string | number) => {
     const isSol = (network || '').toLowerCase() === 'solana'
     const chainId = isSol ? null : getEvmChainId(network)
     const symbol = (currency || '').toUpperCase()
+    const n = nonce != null ? String(nonce) : qrNonce
 
     if (isSol) {
       const token = getTokenInfo('solana', symbol)
       if (token && token.standard === 'spl') {
         const units = toBaseUnits(amount, token.decimals)
-        return `solana:${address}?amount=${amount}&spl-token=${token.address}&reference=${units}`
+        return `solana:${address}?amount=${amount}&spl-token=${token.address}&reference=${units}&t=${n}`
       }
-      return `solana:${address}?amount=${amount}`
+      return `solana:${address}?amount=${amount}&t=${n}`
     }
 
     const token = getTokenInfo((network || '').toLowerCase(), symbol)
     if (token && token.standard === 'erc20') {
       const atChain = chainId ? `@${chainId}` : ''
       const units = toBaseUnits(amount, token.decimals)
-      return `ethereum:${token.address}${atChain}/transfer?address=${address}&uint256=${units}`
+      return `ethereum:${token.address}${atChain}/transfer?address=${address}&uint256=${units}&t=${n}`
     }
 
     // Bitcoin / Monero / native ETH-like
     const net = (network || '').toLowerCase()
     if (net === 'bitcoin') {
       // BIP21 URI
-      return `bitcoin:${address}?amount=${amount}`
+      return `bitcoin:${address}?amount=${amount}&t=${n}`
     }
     if (net === 'monero') {
       // Monero URI (amount in XMR)
-      return `monero:${address}?tx_amount=${amount}`
+      return `monero:${address}?tx_amount=${amount}&t=${n}`
     }
     const atChain = chainId ? `@${chainId}` : ''
     const wei = toBaseUnits(amount, 18)
-    return `ethereum:${address}${atChain}?value=${wei}`
+    return `ethereum:${address}${atChain}?value=${wei}&t=${n}`
   }
 
   const fetchWithRetry = async (url: string, options?: RequestInit, attempts = 12, delayMs = 400): Promise<any> => {
@@ -137,6 +140,7 @@ export default function PayRequest() {
           setData(j.data)
           const uri = buildPaymentUri(j.data.network, j.data.to_address, j.data.amount, j.data.currency)
           setQr(await QRCode.toDataURL(uri))
+          setQrNonce(String(Date.now()))
           // Immediately check the chain for this newly generated QR/selection
           triggerChainCheck()
         } else {
@@ -232,6 +236,7 @@ export default function PayRequest() {
     setQr(await QRCode.toDataURL(uri))
     // New QR selected → kick off chain check for this wallet/amount
     triggerChainCheck()
+    setQrNonce(String(Date.now()))
 
     // Persist the selection back to the payment request so monitoring uses correct chain/address
     try {
@@ -378,6 +383,10 @@ export default function PayRequest() {
         const nowLeft = lockUntil ? Math.max(0, Math.floor((lockUntil - Date.now()) / 1000)) : 0
         return nowLeft
       })
+      // When lock expires, rotate QR by bumping nonce even if price didn't change
+      if (lockUntil && Date.now() >= lockUntil) {
+        setQrNonce(String(Date.now()))
+      }
     }, 1000)
     return () => clearInterval(tick)
     // eslint-disable-next-line react-hooks/exhaustive-deps
