@@ -90,6 +90,21 @@ export default function LiveTracker() {
               <option value={30000}>30s</option>
             </select>
             <button onClick={loadPendings} className="px-3 py-2 border rounded-md text-sm">Refresh</button>
+            <button
+              className="px-3 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700"
+              onClick={async()=>{
+                try{
+                  const r=await fetch('/api/payment-requests/expire-manual',{method:'POST'})
+                  const j=await r.json().catch(()=>null)
+                  if(j?.success){
+                    alert(`Expired ${j.data?.expired||0} (of ${j.data?.totalPending||0})`)
+                    await loadPendings()
+                  } else {
+                    alert(j?.error||'Failed to expire')
+                  }
+                }catch(e:any){ alert(e?.message||'Error') }
+              }}
+            >Expire &gt;5m</button>
           </div>
         </div>
 
