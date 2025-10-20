@@ -50,7 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Manual expiry: Found ${oldPayments.length} payments to expire`)
 
     // Expire the old payments
-    const { data: expired, error: expireError } = await supabaseAdmin
+    let expired: any[] | null = null
+    const { data: expiredBulk, error: expireError } = await supabaseAdmin
       .from('payment_requests')
       .update({ 
         status: 'failed', 
@@ -60,8 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('id')
 
     if (expireError) {
-      console.error('Manual expiry: Error expiring payments:', expireError)
-      return res.status(500).json({ success: false, error: 'Failed to expire payments', details: expireError.message })
+      // Fallback: perform update with server-side filtering (avoids large IN lists and some policy edge cases)
+      console.warn('Manual expiry: bulk update failed, trying filtered update:', expireError)
+      const { data: expiredFiltered, error: filteredErr } = await supabaseAdmin
+        .from('payment_requests')
+        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .filter('status', 'ilike', 'pending')
+        .lt('created_at', fiveMinutesAgo)
+        .select('id')
+      if (filteredErr) {
+        console.error('Manual expiry: filtered update also failed:', filteredErr)
+        return res.status(500).json({ success: false, error: 'Failed to expire payments', details: filteredErr.message || expireError.message })
+      }
+      expired = expiredFiltered as any
+    } else {
+      expired = expiredBulk as any
     }
 
     console.log(`Manual expiry: Successfully expired ${expired?.length || 0} payments`)
