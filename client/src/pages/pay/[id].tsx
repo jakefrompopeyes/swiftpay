@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -39,6 +39,17 @@ export default function PayRequest() {
   const [lockedPrice, setLockedPrice] = useState<number | null>(null)
   const [autoRequote, setAutoRequote] = useState<boolean>((process.env.NEXT_PUBLIC_AUTO_REQUOTE || '1') !== '0')
   const [tolerancePct, setTolerancePct] = useState<number>(parseFloat(String(process.env.NEXT_PUBLIC_TOLERANCE_PCT || '0')))
+
+  // Throttle chain checks so we don't spam the endpoint if QR updates rapidly
+  const lastCheckAtRef = useRef<number>(0)
+  const triggerChainCheck = async () => {
+    try {
+      const now = Date.now()
+      if (now - lastCheckAtRef.current < 2500) return
+      lastCheckAtRef.current = now
+      await fetch(`/api/payment-requests/${id}/check-chain`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: id }) })
+    } catch {}
+  }
 
   const formatAmount = (n: number | null | undefined) => {
     const v = typeof n === 'number' ? n : parseFloat(String(n ?? '0'))
@@ -126,6 +137,8 @@ export default function PayRequest() {
           setData(j.data)
           const uri = buildPaymentUri(j.data.network, j.data.to_address, j.data.amount, j.data.currency)
           setQr(await QRCode.toDataURL(uri))
+          // Immediately check the chain for this newly generated QR/selection
+          triggerChainCheck()
         } else {
           setLoadError(j?.error || 'Payment request not found')
         }
@@ -217,6 +230,8 @@ export default function PayRequest() {
     }
     const uri = buildPaymentUri(wallet.network, wallet.address, amountToPay, wallet.currency)
     setQr(await QRCode.toDataURL(uri))
+    // New QR selected → kick off chain check for this wallet/amount
+    triggerChainCheck()
 
     // Persist the selection back to the payment request so monitoring uses correct chain/address
     try {
@@ -321,6 +336,8 @@ export default function PayRequest() {
             setCurrentAmount(amt)
             const uri = buildPaymentUri(wallet.network, wallet.address, amt, wallet.currency)
             setQr(await QRCode.toDataURL(uri))
+            // QR refreshed due to re-quote or price refresh → re-check chain
+            triggerChainCheck()
             // If lock expired, start a new lock window using the latest price
             if (!lockUntil || now >= lockUntil) {
               if (selPrice > 0) {
