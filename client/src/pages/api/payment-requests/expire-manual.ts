@@ -56,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'failed', 
         updated_at: new Date().toISOString() 
       })
-      .in('id', oldPayments.map(p => p.id))
+      .in('id', oldPayments.map((p: any) => p.id))
       .select('id')
 
     if (expireError) {
