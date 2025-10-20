@@ -72,6 +72,13 @@ export default function LeftNavigation() {
           description: 'View payment links'
         },
         {
+          id: 'live-tracker',
+          name: 'Live Tracker',
+          href: '/live-tracker',
+          icon: ClockIcon,
+          description: 'Monitor confirmations'
+        },
+        {
           id: 'merchant-tools',
           name: 'Integration Tools',
           href: '/merchant-tools',
